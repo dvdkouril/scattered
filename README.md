@@ -4,3 +4,8 @@ idea: input an arrow/parquet (just with x, y, z fields), show scatterplot in can
 - https://matplotlib.org/stable/gallery/mplot3d/scatter3d.html
 - https://plotly.com/python/3d-scatter-plots/
 - https://jupyter-scatter.dev (i don't think there's 3D option)
+
+
+scattered
+scatter 3d
+scatter3rd
