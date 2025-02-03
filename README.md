@@ -13,6 +13,7 @@ the basic idea is:
 - https://matplotlib.org/stable/gallery/mplot3d/scatter3d.html
 - https://plotly.com/python/3d-scatter-plots/
 - https://jupyter-scatter.dev (i don't think there's 3D option)
+- https://abdenlab.org/eigen-tour/
 
 ## name
 scatter plot -> scatter 3D, scatter3rd -> scatter3d/scattered
