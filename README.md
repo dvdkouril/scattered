@@ -4,10 +4,10 @@
 
 the basic idea is:
 - input: an arrow/parquet (just with 'x', 'y', 'z' columns)
-- low number of dependencies: just vite, typescript
+- zero dependencies (just vite, typescript for dev)
 - webgpu rendering
-- show scatterplot in canvas, 
-- widget version can consume numpy and pandas
+- minimal API for displaying 3D scatterplots in canvas
+- also a widget version, can consume numpy and pandas
 
 ## related and inspo:
 - https://matplotlib.org/stable/gallery/mplot3d/scatter3d.html
