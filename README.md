@@ -9,3 +9,5 @@ idea: input an arrow/parquet (just with x, y, z fields), show scatterplot in can
 scattered
 scatter 3d
 scatter3rd
+scattered
+scatter3d
