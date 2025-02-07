@@ -23,3 +23,4 @@ scatter plot -> scatter 3D, scatter3rd -> scatter3d/scattered
 ## goals
 1. demonstrate composability principles
 2. learn a bit of webgpu
+    - just following https://webgpufundamentals.org/ for now
