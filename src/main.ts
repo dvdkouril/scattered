@@ -30,38 +30,56 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   });
 
   const module = device.createShaderModule({
-    label: 'our hardcoded rgb triangle shaders',
+    label: 'triangle shaders with uniforms',
     code: `
-      struct OurVertexShaderOutput {
-        @builtin(position) position: vec4f,
-        @location(0) color: vec4f,
+      struct OurStruct {
+        color: vec4f,
+        scale: vec2f,
+        offset: vec2f,
       };
+
+      @group(0) @binding(0) var<uniform> ourStruct: OurStruct;
 
       @vertex fn vs(
         @builtin(vertex_index) vertexIndex : u32
-      ) -> OurVertexShaderOutput {
+      ) -> @builtin(position) vec4f {
         let pos = array(
           vec2f( 0.0,  0.5),  // top center
           vec2f(-0.5, -0.5),  // bottom left
           vec2f( 0.5, -0.5)   // bottom right
         );
-        var color = array<vec4f, 3>(
-          vec4f(1, 0, 0, 1), // red
-          vec4f(0, 1, 0, 1), // green
-          vec4f(0, 0, 1, 1), // blue
+        return vec4f(
+          pos[vertexIndex] * ourStruct.scale + ourStruct.offset,
+          0.0, 
+          1.0
         );
- 
-        var vsOutput: OurVertexShaderOutput;
-        vsOutput.position = vec4f(pos[vertexIndex], 0.0, 1.0);
-        vsOutput.color = color[vertexIndex];
-        return vsOutput;
       }
  
-      @fragment fn fs(fsInput: OurVertexShaderOutput) -> @location(0) vec4f {
-        return fsInput.color;
+      @fragment fn fs() -> @location(0) vec4f {
+        return ourStruct.color;
       }
     `,
   });
+
+  const uniformBufferSize =
+    4 * 4 + // color is 4 32bit floats (4bytes each)
+    2 * 4 + // scale is 2 32bit floats (4bytes each)
+    2 * 4;  // offset is 2 32bit floats (4bytes each)
+  const uniformBuffer = device.createBuffer({
+    size: uniformBufferSize,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  // create a typedarray to hold the values for the uniforms in JavaScript
+  const uniformValues = new Float32Array(uniformBufferSize / 4);
+
+  // offsets to the various uniform values in float32 indices
+  const kColorOffset = 0;
+  const kScaleOffset = 4;
+  const kOffsetOffset = 6;
+
+  uniformValues.set([0, 1, 0, 1], kColorOffset);        // set the color
+  uniformValues.set([-0.5, -0.25], kOffsetOffset);      // set the offset
 
   const pipeline = device.createRenderPipeline({
     label: 'our hardcoded red triangle pipeline',
@@ -77,6 +95,14 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     },
   });
 
+  const bindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+    ],
+  });
+
+
   const renderPassDescriptor: GPURenderPassDescriptor = {
     label: 'our basic canvas renderPass',
     colorAttachments: [
@@ -90,6 +116,17 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   };
 
   function render() {
+    if (!device) {
+      console.warn("device should not be null or undefined at this point!");
+      return;
+    }
+    // Set the uniform values in our JavaScript side Float32Array
+    const aspect = canvas.width / canvas.height;
+    uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
+
+    // copy the values from JavaScript to the GPU
+    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+
     // Get the current texture from the canvas context and
     // set it as the texture to render to.
     renderPassDescriptor.colorAttachments[0].view =
@@ -101,6 +138,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     // make a render pass encoder to encode render specific commands
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
     pass.draw(3);  // call our vertex shader 3 times
     pass.end();
 
