@@ -5,6 +5,7 @@ function display(url: string): HTMLCanvasElement {
   initWebGPUStuff(cEl);
   //const data = fetchRemoteData(url);
   console.log(`gonna fetch from ${url}`);
+  cEl.style.width = "100%";
   return cEl;
 }
 
@@ -68,29 +69,44 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     colorAttachments: [
       {
         // view: <- to be filled out when we render
-        clearValue: [0.3, 0.3, 0.3, 1],
+        clearValue: [1.0, 1.0, 1.0, 1],
         loadOp: 'clear',
         storeOp: 'store',
       },
     ],
   };
 
-  // Get the current texture from the canvas context and
-  // set it as the texture to render to.
-  renderPassDescriptor.colorAttachments[0].view =
-    context.getCurrentTexture().createView();
+  function render() {
+    // Get the current texture from the canvas context and
+    // set it as the texture to render to.
+    renderPassDescriptor.colorAttachments[0].view =
+      context.getCurrentTexture().createView();
 
-  // make a command encoder to start encoding commands
-  const encoder = device.createCommandEncoder({ label: 'our encoder' });
+    // make a command encoder to start encoding commands
+    const encoder = device.createCommandEncoder({ label: 'our encoder' });
 
-  // make a render pass encoder to encode render specific commands
-  const pass = encoder.beginRenderPass(renderPassDescriptor);
-  pass.setPipeline(pipeline);
-  pass.draw(3);  // call our vertex shader 3 times
-  pass.end();
+    // make a render pass encoder to encode render specific commands
+    const pass = encoder.beginRenderPass(renderPassDescriptor);
+    pass.setPipeline(pipeline);
+    pass.draw(3);  // call our vertex shader 3 times
+    pass.end();
 
-  const commandBuffer = encoder.finish();
-  device.queue.submit([commandBuffer]);
+    const commandBuffer = encoder.finish();
+    device.queue.submit([commandBuffer]);
+  }
+
+  const observer = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const canvas = entry.target;
+      const width = entry.contentBoxSize[0].inlineSize;
+      const height = entry.contentBoxSize[0].blockSize;
+      canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
+      canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+      // re-render
+      render();
+    }
+  });
+  observer.observe(canvas);
 }
 
 export { display };
