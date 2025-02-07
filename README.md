@@ -2,6 +2,8 @@
 
 *composable library for 3D scatterplots.*
 
+3D scatterplots probably suck, but they're much more fun than regular scatterplots!
+
 the basic idea is:
 - input: an arrow/parquet (just with 'x', 'y', 'z' columns)
 - zero dependencies (just vite, typescript for dev)
