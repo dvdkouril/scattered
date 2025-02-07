@@ -9,6 +9,17 @@ function display(url: string): HTMLCanvasElement {
   return cEl;
 }
 
+const rand = (min?: number, max?: number) => {
+  if (min === undefined) {
+    min = 0;
+    max = 1;
+  } else if (max === undefined) {
+    max = min;
+    min = 0;
+  }
+  return min + Math.random() * (max - min);
+};
+
 async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
@@ -73,14 +84,6 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   // create a typedarray to hold the values for the uniforms in JavaScript
   const uniformValues = new Float32Array(uniformBufferSize / 4);
 
-  // offsets to the various uniform values in float32 indices
-  const kColorOffset = 0;
-  const kScaleOffset = 4;
-  const kOffsetOffset = 6;
-
-  uniformValues.set([0, 1, 0, 1], kColorOffset);        // set the color
-  uniformValues.set([-0.5, -0.25], kOffsetOffset);      // set the offset
-
   const pipeline = device.createRenderPipeline({
     label: 'our hardcoded red triangle pipeline',
     layout: 'auto',
@@ -102,6 +105,41 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     ],
   });
 
+  // offsets to the various uniform values in float32 indices
+  const kColorOffset = 0;
+  const kScaleOffset = 4;
+  const kOffsetOffset = 6;
+
+  const kNumObjects = 100;
+  const objectInfos = [];
+
+  for (let i = 0; i < kNumObjects; ++i) {
+    const uniformBuffer = device.createBuffer({
+      label: `uniforms for obj: ${i}`,
+      size: uniformBufferSize,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const uniformValues = new Float32Array(uniformBufferSize / 4);
+
+    uniformValues.set([rand(), rand(), rand(), 1], kColorOffset);        // set the color
+    uniformValues.set([rand(-0.9, 0.9), rand(-0.9, 0.9)], kOffsetOffset);      // set the offset
+
+    const bindGroup = device.createBindGroup({
+      label: `bind group for obj: ${i}`,
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+      ],
+    });
+
+    objectInfos.push({
+      scale: rand(0.2, 0.5),
+      uniformBuffer,
+      uniformValues,
+      bindGroup,
+    });
+  }
 
   const renderPassDescriptor: GPURenderPassDescriptor = {
     label: 'our basic canvas renderPass',
@@ -120,12 +158,12 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
       console.warn("device should not be null or undefined at this point!");
       return;
     }
-    // Set the uniform values in our JavaScript side Float32Array
-    const aspect = canvas.width / canvas.height;
-    uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
-
-    // copy the values from JavaScript to the GPU
-    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+    //// Set the uniform values in our JavaScript side Float32Array
+    //const aspect = canvas.width / canvas.height;
+    //uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
+    //
+    //// copy the values from JavaScript to the GPU
+    //device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 
     // Get the current texture from the canvas context and
     // set it as the texture to render to.
@@ -138,8 +176,15 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     // make a render pass encoder to encode render specific commands
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.draw(3);  // call our vertex shader 3 times
+
+    const aspect = canvas.width / canvas.height;
+    for (const { scale, bindGroup, uniformBuffer, uniformValues } of objectInfos) {
+      uniformValues.set([scale / aspect, scale], kScaleOffset);
+      device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+      pass.setBindGroup(0, bindGroup);
+      pass.draw(3);  // call our vertex shader 3 times
+    }
+
     pass.end();
 
     const commandBuffer = encoder.finish();
