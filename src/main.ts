@@ -49,25 +49,35 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
         offset: vec2f,
       };
 
-      @group(0) @binding(0) var<uniform> ourStruct: OurStruct;
+      struct VSOutput {
+        @builtin(position) position: vec4f,
+        @location(0) color: vec4f,
+      }
+
+      @group(0) @binding(0) var<storage, read> ourStructs: array<OurStruct>;
 
       @vertex fn vs(
-        @builtin(vertex_index) vertexIndex : u32
-      ) -> @builtin(position) vec4f {
+        @builtin(vertex_index) vertexIndex : u32,
+        @builtin(instance_index) instanceIndex: u32
+      ) -> VSOutput {
         let pos = array(
           vec2f( 0.0,  0.5),  // top center
           vec2f(-0.5, -0.5),  // bottom left
           vec2f( 0.5, -0.5)   // bottom right
         );
-        return vec4f(
-          pos[vertexIndex] * ourStruct.scale + ourStruct.offset,
+        
+        var vsOut: VSOutput;
+        vsOut.position = vec4f(
+          pos[vertexIndex] * ourStructs[instanceIndex].scale + ourStructs[instanceIndex].offset,
           0.0, 
           1.0
         );
+        vsOut.color = ourStructs[instanceIndex].color;
+        return vsOut;
       }
  
-      @fragment fn fs() -> @location(0) vec4f {
-        return ourStruct.color;
+      @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+        return vsOut.color;
       }
     `,
   });
@@ -113,11 +123,13 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   const kNumObjects = 100;
   const objectInfos = [];
 
+  //const staticUnitSize = 
+
   for (let i = 0; i < kNumObjects; ++i) {
     const uniformBuffer = device.createBuffer({
       label: `uniforms for obj: ${i}`,
       size: uniformBufferSize,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
     const uniformValues = new Float32Array(uniformBufferSize / 4);
