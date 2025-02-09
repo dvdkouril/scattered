@@ -158,6 +158,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     colorAttachments: [
       {
         // view: <- to be filled out when we render
+        view: context.getCurrentTexture().createView(), //~ had to add this to get rid of ts error
         clearValue: [1.0, 1.0, 1.0, 1],
         loadOp: 'clear',
         storeOp: 'store',
@@ -170,17 +171,18 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
       console.warn("device should not be null or undefined at this point!");
       return;
     }
-    //// Set the uniform values in our JavaScript side Float32Array
-    //const aspect = canvas.width / canvas.height;
-    //uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
-    //
-    //// copy the values from JavaScript to the GPU
-    //device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+    if (!context) {
+      console.warn("context should not be null or undefined at this point!");
+      return;
+    }
 
     // Get the current texture from the canvas context and
     // set it as the texture to render to.
-    renderPassDescriptor.colorAttachments[0].view =
-      context.getCurrentTexture().createView();
+    for (const colAtt of renderPassDescriptor.colorAttachments) {
+      if (colAtt) {
+        colAtt.view = context.getCurrentTexture().createView();
+      }
+    }
 
     // make a command encoder to start encoding commands
     const encoder = device.createCommandEncoder({ label: 'our encoder' });
@@ -205,7 +207,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
 
   const observer = new ResizeObserver(entries => {
     for (const entry of entries) {
-      const canvas = entry.target;
+      const canvas = entry.target as HTMLCanvasElement;
       const width = entry.contentBoxSize[0].inlineSize;
       const height = entry.contentBoxSize[0].blockSize;
       canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
