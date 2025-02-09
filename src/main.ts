@@ -1,11 +1,38 @@
 //import { fetchRemoteData } from "./loaders";
 
+async function loadDataFromURL(url: string): Promise<ArrayBuffer | undefined> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    const buffer = await response.arrayBuffer();
+    //return load(buffer, options);
+    return buffer;
+  } catch (err) {
+    let message = "Unknown Error";
+    if (err instanceof Error) message = err.message;
+    console.error(message);
+    return undefined;
+  }
+}
+
 function display(url: string): HTMLCanvasElement {
   const cEl = document.createElement("canvas");
-  initWebGPUStuff(cEl);
-  //const data = fetchRemoteData(url);
-  console.log(`gonna fetch from ${url}`);
   cEl.style.width = "100%";
+
+  console.log(`gonna fetch from ${url}`);
+  loadDataFromURL(url).then(d => {
+    if (d) {
+      console.log(`loaded data of size: ${d.byteLength}`);
+    } else {
+      console.log("failed fetching the data");
+    }
+    d?.byteLength
+  }).catch(_ => { console.log("failed fetching the data") });
+
+  initWebGPUStuff(cEl);
+
   return cEl;
 }
 
