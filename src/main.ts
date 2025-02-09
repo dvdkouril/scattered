@@ -9,7 +9,7 @@ function display(url: string): HTMLCanvasElement {
   return cEl;
 }
 
-const rand = (min?: number, max?: number) => {
+function rand(min?: number, max?: number): number {
   if (min === undefined) {
     min = 0;
     max = 1;
@@ -18,7 +18,15 @@ const rand = (min?: number, max?: number) => {
     min = 0;
   }
   return min + Math.random() * (max - min);
-};
+}
+
+function generateRandomPoints(n: number): number[] {
+  const res: number[] = [];
+  for (let i = 0; i < n; i++) {
+    res.push(rand(), rand(), rand(), 1);
+  }
+  return res;
+}
 
 async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   const adapter = await navigator.gpu?.requestAdapter();
@@ -40,13 +48,13 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     format: presentationFormat,
   });
 
+  /* -------- shaders setup --------  */
   const module = device.createShaderModule({
-    label: 'triangle shaders with uniforms',
+    label: 'instanced triangles',
     code: `
-      struct OurStruct {
+      struct TriangleData {
+        position: vec4f,
         color: vec4f,
-        scale: vec2f,
-        offset: vec2f,
       };
 
       struct VSOutput {
@@ -54,7 +62,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
         @location(0) color: vec4f,
       }
 
-      @group(0) @binding(0) var<storage, read> ourStructs: array<OurStruct>;
+      @group(0) @binding(0) var<storage, read> triangleData: array<TriangleData>;
 
       @vertex fn vs(
         @builtin(vertex_index) vertexIndex : u32,
@@ -65,14 +73,15 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
           vec2f(-0.5, -0.5),  // bottom left
           vec2f( 0.5, -0.5)   // bottom right
         );
-        
+       
+        const scale = 0.1;
         var vsOut: VSOutput;
         vsOut.position = vec4f(
-          pos[vertexIndex] * ourStructs[instanceIndex].scale + ourStructs[instanceIndex].offset,
+          pos[vertexIndex] * scale + triangleData[instanceIndex].position.xy,
           0.0, 
           1.0
         );
-        vsOut.color = ourStructs[instanceIndex].color;
+        vsOut.color = triangleData[instanceIndex].color;
         return vsOut;
       }
  
@@ -81,18 +90,6 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
       }
     `,
   });
-
-  const uniformBufferSize =
-    4 * 4 + // color is 4 32bit floats (4bytes each)
-    2 * 4 + // scale is 2 32bit floats (4bytes each)
-    2 * 4;  // offset is 2 32bit floats (4bytes each)
-  const uniformBuffer = device.createBuffer({
-    size: uniformBufferSize,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  // create a typedarray to hold the values for the uniforms in JavaScript
-  const uniformValues = new Float32Array(uniformBufferSize / 4);
 
   const pipeline = device.createRenderPipeline({
     label: 'our hardcoded red triangle pipeline',
@@ -108,50 +105,33 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     },
   });
 
+  /* -------- buffer setup --------  */
+  const numOfObjects = 100;
+  const a = generateRandomPoints(numOfObjects);
+
+  const dataBufferSize =
+    4 * 4 + // position is 4 32bit floats (4bytes each)
+    4 * 4   // color is 4 32bit floats (4bytes each)
+  const dataBuffer = device.createBuffer({
+    label: "buffer for positions + colors for each instance",
+    size: dataBufferSize * numOfObjects,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  // create a typedarray to hold the values for the uniforms in JavaScript
+  //const uniformValues = new Float32Array(uniformBufferSize / 4);
+  const dataValues = new Float32Array(a);
+
+  //const positionOffset = 0;
+  //const colorOffset = 4;
+  device.queue.writeBuffer(dataBuffer, 0, dataValues);
+
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 0, resource: { buffer: dataBuffer } },
     ],
   });
-
-  // offsets to the various uniform values in float32 indices
-  const kColorOffset = 0;
-  const kScaleOffset = 4;
-  const kOffsetOffset = 6;
-
-  const kNumObjects = 100;
-  const objectInfos = [];
-
-  //const staticUnitSize = 
-
-  for (let i = 0; i < kNumObjects; ++i) {
-    const uniformBuffer = device.createBuffer({
-      label: `uniforms for obj: ${i}`,
-      size: uniformBufferSize,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-
-    const uniformValues = new Float32Array(uniformBufferSize / 4);
-
-    uniformValues.set([rand(), rand(), rand(), 1], kColorOffset);        // set the color
-    uniformValues.set([rand(-0.9, 0.9), rand(-0.9, 0.9)], kOffsetOffset);      // set the offset
-
-    const bindGroup = device.createBindGroup({
-      label: `bind group for obj: ${i}`,
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-      ],
-    });
-
-    objectInfos.push({
-      scale: rand(0.2, 0.5),
-      uniformBuffer,
-      uniformValues,
-      bindGroup,
-    });
-  }
 
   const renderPassDescriptor: GPURenderPassDescriptor = {
     label: 'our basic canvas renderPass',
@@ -191,13 +171,15 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
 
-    const aspect = canvas.width / canvas.height;
-    for (const { scale, bindGroup, uniformBuffer, uniformValues } of objectInfos) {
-      uniformValues.set([scale / aspect, scale], kScaleOffset);
-      device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-      pass.setBindGroup(0, bindGroup);
-      pass.draw(3);  // call our vertex shader 3 times
-    }
+    //const aspect = canvas.width / canvas.height;
+    //for (const { scale, bindGroup, uniformBuffer, uniformValues } of objectInfos) {
+    //  uniformValues.set([scale / aspect, scale], kScaleOffset);
+    //  device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+    //  pass.setBindGroup(0, bindGroup);
+    //  pass.draw(3);  // call our vertex shader 3 times
+    //}
+    pass.setBindGroup(0, bindGroup);
+    pass.draw(3, numOfObjects);
 
     pass.end();
 
