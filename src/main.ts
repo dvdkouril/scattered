@@ -1,5 +1,7 @@
 //import { fetchRemoteData } from "./loaders";
 
+import { mat4 } from "gl-matrix";
+
 async function loadDataFromURL(url: string): Promise<ArrayBuffer | undefined> {
   try {
     const response = await fetch(url);
@@ -17,19 +19,32 @@ async function loadDataFromURL(url: string): Promise<ArrayBuffer | undefined> {
   }
 }
 
+function prepareCameraMatrix(width: number, height: number): mat4 {
+
+  const projMat = mat4.create();
+  const fovy = Math.PI / 4.0;
+  const near = 10.0;
+  const far = 0.1;
+  const aspect = width / height;
+  //mat4.perspective(projMat, fovy, aspect, near, far);
+  mat4.perspectiveZO(projMat, fovy, aspect, near, far);
+
+  return projMat;
+}
+
 function display(url: string): HTMLCanvasElement {
   const cEl = document.createElement("canvas");
   cEl.style.width = "100%";
 
   console.log(`gonna fetch from ${url}`);
-  loadDataFromURL(url).then(d => {
-    if (d) {
-      console.log(`loaded data of size: ${d.byteLength}`);
-    } else {
-      console.log("failed fetching the data");
-    }
-    d?.byteLength
-  }).catch(_ => { console.log("failed fetching the data") });
+  //loadDataFromURL(url).then(d => {
+  //  if (d) {
+  //    console.log(`loaded data of size: ${d.byteLength}`);
+  //  } else {
+  //    console.log("failed fetching the data");
+  //  }
+  //  d?.byteLength
+  //}).catch(_ => { console.log("failed fetching the data") });
 
   initWebGPUStuff(cEl);
 
@@ -83,6 +98,10 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
         position: vec4f,
         color: vec4f,
       };
+  
+      struct Uniforms {
+        projection: mat4x4f,
+      };
 
       struct VSOutput {
         @builtin(position) position: vec4f,
@@ -90,6 +109,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
       }
 
       @group(0) @binding(0) var<storage, read> triangleData: array<TriangleData>;
+      @group(0) @binding(1) var<uniform> uni: Uniforms;
 
       @vertex fn vs(
         @builtin(vertex_index) vertexIndex : u32,
@@ -103,11 +123,15 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
        
         const scale = 0.1;
         var vsOut: VSOutput;
-        vsOut.position = vec4f(
-          pos[vertexIndex] * scale + triangleData[instanceIndex].position.xy,
-          0.0, 
-          1.0
-        );
+        var instPos = triangleData[instanceIndex].position;
+        var vertPos = instPos + vec4f(pos[vertexIndex] * scale, -5.0, 1.0);
+        var transformedPos = uni.projection * vertPos;
+        //vsOut.position = vec4f(
+        //  pos[vertexIndex] * scale + instPos.xy,
+        //  0.0, 
+        //  1.0
+        //);
+        vsOut.position = transformedPos;
         vsOut.color = triangleData[instanceIndex].color;
         return vsOut;
       }
@@ -145,18 +169,24 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  // create a typedarray to hold the values for the uniforms in JavaScript
-  //const uniformValues = new Float32Array(uniformBufferSize / 4);
   const dataValues = new Float32Array(a);
-
-  //const positionOffset = 0;
-  //const colorOffset = 4;
   device.queue.writeBuffer(dataBuffer, 0, dataValues);
+
+  /* -------- buffer setup: uniforms (matrices) --------  */
+  const uniformBufferSize = 4 * 4 * 4;
+  const uniformBuffer = device.createBuffer({
+    label: 'uniforms',
+    size: uniformBufferSize,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  //const uniformValues = new Float32Array(uniformBufferSize / 4);
 
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: { buffer: dataBuffer } },
+      { binding: 1, resource: { buffer: uniformBuffer } },
     ],
   });
 
@@ -198,16 +228,18 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
 
-    //const aspect = canvas.width / canvas.height;
-    //for (const { scale, bindGroup, uniformBuffer, uniformValues } of objectInfos) {
-    //  uniformValues.set([scale / aspect, scale], kScaleOffset);
-    //  device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-    //  pass.setBindGroup(0, bindGroup);
-    //  pass.draw(3);  // call our vertex shader 3 times
-    //}
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    console.log(`width: ${w}, height: ${h}`);
+    const projectionMatrix = prepareCameraMatrix(w, h);
+
+    const uniformValues = projectionMatrix as Float32Array; //~ TODO: is this correct???
+    console.log("uniformValues");
+    console.log(uniformValues);
+    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+
     pass.setBindGroup(0, bindGroup);
     pass.draw(3, numOfObjects);
-
     pass.end();
 
     const commandBuffer = encoder.finish();
