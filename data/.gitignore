@@ -1,7 +1,0 @@
-# pixi environments
-.pixi
-*.egg-info
-
-# Python
-__pycache__
-.ipynb_checkpoints
