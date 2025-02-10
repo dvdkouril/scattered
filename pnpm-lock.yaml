@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      gl-matrix:
+        specifier: ^3.4.3
+        version: 3.4.3
     devDependencies:
       '@webgpu/types':
         specifier: ^0.1.54
@@ -281,6 +285,9 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
+  gl-matrix@3.4.3:
+    resolution: {integrity: sha512-wcCp8vu8FT22BnvKVPjXa/ICBWRq/zjFfdofZy1WSpQZpphblv12/bOQLBC1rMM7SGOFS9ltVmKOHil5+Ml7gA==}
+
   nanoid@3.3.8:
     resolution: {integrity: sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -515,6 +522,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  gl-matrix@3.4.3: {}
 
   nanoid@3.3.8: {}
 
