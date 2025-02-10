@@ -1,6 +1,6 @@
 //import { fetchRemoteData } from "./loaders";
 
-import { mat4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 async function loadDataFromURL(url: string): Promise<ArrayBuffer | undefined> {
   try {
@@ -30,6 +30,16 @@ function prepareCameraMatrix(width: number, height: number): mat4 {
   mat4.perspectiveZO(projMat, fovy, aspect, near, far);
 
   return projMat;
+}
+
+function prepareViewMatrix(eye: vec3): mat4 {
+  const viewMat = mat4.create();
+
+  const center = vec3.fromValues(0, 0, 0);
+  const up = vec3.fromValues(0, 1, 0);
+  mat4.lookAt(viewMat, eye, center, up);
+
+  return viewMat;
 }
 
 function display(url: string): HTMLCanvasElement {
@@ -101,6 +111,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   
       struct Uniforms {
         projection: mat4x4f,
+        view: mat4x4f,
       };
 
       struct VSOutput {
@@ -124,13 +135,8 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
         const scale = 0.1;
         var vsOut: VSOutput;
         var instPos = triangleData[instanceIndex].position;
-        var vertPos = instPos + vec4f(pos[vertexIndex] * scale, -5.0, 1.0);
-        var transformedPos = uni.projection * vertPos;
-        //vsOut.position = vec4f(
-        //  pos[vertexIndex] * scale + instPos.xy,
-        //  0.0, 
-        //  1.0
-        //);
+        var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
+        var transformedPos = uni.projection * uni.view * vertPos;
         vsOut.position = transformedPos;
         vsOut.color = triangleData[instanceIndex].color;
         return vsOut;
@@ -173,7 +179,7 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   device.queue.writeBuffer(dataBuffer, 0, dataValues);
 
   /* -------- buffer setup: uniforms (matrices) --------  */
-  const uniformBufferSize = 4 * 4 * 4;
+  const uniformBufferSize = 4 * 16 * 2;
   const uniformBuffer = device.createBuffer({
     label: 'uniforms',
     size: uniformBufferSize,
@@ -203,7 +209,13 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     ],
   };
 
+  let angle = 0;
+  const speed = 0.1;
+
   function render() {
+    console.log("render()");
+    //let requestId = requestAnimationFrame(render);
+    requestAnimationFrame(render);
     if (!device) {
       console.warn("device should not be null or undefined at this point!");
       return;
@@ -230,13 +242,27 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
 
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
+    const radius = 2;
+    const camX = Math.cos(angle) * radius;
+    const camZ = Math.sin(angle) * radius;
+    const cameraPosition = vec3.fromValues(camX, 0, camZ);
     console.log(`width: ${w}, height: ${h}`);
     const projectionMatrix = prepareCameraMatrix(w, h);
+    const viewMatrix = prepareViewMatrix(cameraPosition);
 
-    const uniformValues = projectionMatrix as Float32Array; //~ TODO: is this correct???
-    console.log("uniformValues");
-    console.log(uniformValues);
-    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+    const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
+    const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
+
+    const numOfMatrices = 2;
+    const allUniformArrays = new Float32Array(numOfMatrices * 16);
+    allUniformArrays.set(projectionMatAsF32A, 0);
+    allUniformArrays.set(viewMatAsF32A, projectionMatAsF32A.length);
+
+    //const result = new Float32Array(proj.length + b.length);
+    //result.set(a, 0);
+    //result.set(b, a.length);
+    //return result;
+    device.queue.writeBuffer(uniformBuffer, 0, allUniformArrays);
 
     pass.setBindGroup(0, bindGroup);
     pass.draw(3, numOfObjects);
@@ -244,6 +270,8 @@ async function initWebGPUStuff(canvas: HTMLCanvasElement) {
 
     const commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer]);
+
+    angle += speed * Math.PI / 12;
   }
 
   const observer = new ResizeObserver(entries => {
