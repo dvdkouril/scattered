@@ -4,6 +4,10 @@
 
 3D scatterplots probably suck, but they're much more fun than regular scatterplots!
 
+<img width="863" alt="image" src="https://github.com/user-attachments/assets/7e63c09b-90ac-4c23-abcd-69e559e5dcce" />
+
+
+
 the basic idea is:
 - input: an arrow/parquet (just with 'x', 'y', 'z' columns)
 - zero dependencies (just vite, typescript for dev)
