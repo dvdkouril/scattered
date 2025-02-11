@@ -46,6 +46,7 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       struct Uniforms {
         projection: mat4x4f,
         view: mat4x4f,
+        eyePosition: vec4f,
       };
 
       //struct Settings {
@@ -87,8 +88,16 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         var z = zPositions[instanceIndex] * positionsScale;
         var instPos = vec4f(x, y, z, 1.0);
 
+        //~ impostors: align to alway face camera
+        var eyeToPos = normalize(instPos - uni.eyePosition);
+        var upVec = vec3f(0.0, 1.0, 0.0);
+        var rightVec = cross(eyeToPos.xyz, upVec);
+        var v = pos[vertexIndex] * scale;
+        var vPos = v.x * rightVec + v.y * upVec;
+
         //~ calculate position of each instance vertex
-        var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
+        //var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
+        var vertPos = instPos + vec4f(vPos, 1.0);
         //~ camera transform + projection
         var transformedPos = uni.projection * uni.view * vertPos;
 
@@ -156,7 +165,7 @@ export async function initWebGPUStuff(
   );
 
   /* -------- buffer setup: uniforms (matrices) --------  */
-  const uniformBufferSize = 4 * 16 * 2;
+  const uniformBufferSize = 4 * 16 * 2 + 4 * 4;
   const uniformBuffer = device.createBuffer({
     label: 'uniforms',
     size: uniformBufferSize,
@@ -191,12 +200,12 @@ export async function initWebGPUStuff(
   };
 
   let angle = 0;
-  const speed = 0.1;
+  const speed = 0.01;
 
   function render() {
     console.log("render()");
     //let requestId = requestAnimationFrame(render);
-    //requestAnimationFrame(render);
+    requestAnimationFrame(render);
     if (!device) {
       console.warn("device should not be null or undefined at this point!");
       return;
@@ -235,9 +244,10 @@ export async function initWebGPUStuff(
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
 
     const numOfMatrices = 2;
-    const allUniformArrays = new Float32Array(numOfMatrices * 16);
+    const allUniformArrays = new Float32Array(numOfMatrices * 16 + 4);
     allUniformArrays.set(projectionMatAsF32A, 0);
     allUniformArrays.set(viewMatAsF32A, projectionMatAsF32A.length);
+    allUniformArrays.set([cameraPosition[0], cameraPosition[1], cameraPosition[2], 1.0], projectionMatAsF32A.length + viewMatAsF32A.length);
 
     device.queue.writeBuffer(uniformBuffer, 0, allUniformArrays);
 
