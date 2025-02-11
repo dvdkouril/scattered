@@ -5,7 +5,6 @@ export async function loadDataFromURL(url: string): Promise<ArrayBuffer | undefi
       throw new Error(`Response status: ${response.status}`);
     }
     const buffer = await response.arrayBuffer();
-    //return load(buffer, options);
     return buffer;
   } catch (err) {
     let message = "Unknown Error";

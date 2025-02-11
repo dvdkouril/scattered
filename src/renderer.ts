@@ -1,47 +1,68 @@
-import { generateRandomPoints, prepareViewMatrix, prepareCameraMatrix } from "./utils";
+import { prepareViewMatrix, prepareCameraMatrix } from "./utils";
 import { vec3 } from "gl-matrix";
 
-export async function initWebGPUStuff(canvas: HTMLCanvasElement) {
-  const adapter = await navigator.gpu?.requestAdapter();
-  const device = await adapter?.requestDevice();
-  if (!device) {
-    console.error('need a browser that supports WebGPU');
-    return;
+export function uploadDataToGPU(
+  device: GPUDevice,
+  xPositionsArray: Float32Array,
+  yPositionsArray: Float32Array,
+  zPositionsArray: Float32Array
+): [GPUBuffer, GPUBuffer, GPUBuffer, GPUBuffer] {
+  const uploadPositionBuffer = (bufferSize: number, dataValues: Float32Array) => {
+    const dataBuffer = device.createBuffer({
+      label: "buffer for x positions",
+      size: bufferSize,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(dataBuffer, 0, dataValues);
+    return dataBuffer;
+  };
+
+  const numOfPoints = xPositionsArray.length;
+  /* generating random colors */
+  const colorsArr: number[] = [];
+  for (let i = 0; i < numOfPoints; i++) {
+    const rgb = [Math.random(), Math.random(), Math.random(), 1.0];
+    colorsArr.push(...rgb);
   }
 
-  // Get a WebGPU context from the canvas and configure it
-  const context = canvas.getContext('webgpu');
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-  if (!context) {
-    console.error('failed when getting webgpu context');
-    return;
-  }
-  context.configure({
-    device,
-    format: presentationFormat,
-  });
+  const bufferSize = 4 * 4 * numOfPoints;
+  /* x buffer */
+  const xBuffer = uploadPositionBuffer(bufferSize, xPositionsArray);
+  /* y buffer */
+  const yBuffer = uploadPositionBuffer(bufferSize, yPositionsArray);
+  /* z buffer */
+  const zBuffer = uploadPositionBuffer(bufferSize, zPositionsArray);
+  /* colors buffer: TODO: kinda semantically not correct */
+  const colBuffer = uploadPositionBuffer(bufferSize, new Float32Array(colorsArr));
 
+  return [xBuffer, yBuffer, zBuffer, colBuffer];
+}
+
+export function createShaders(device: GPUDevice, presentationFormat: GPUTextureFormat): GPURenderPipeline {
   /* -------- shaders setup --------  */
   const module = device.createShaderModule({
     label: 'instanced triangles',
     code: `
-      struct TriangleData {
-        position: vec4f,
-        color: vec4f,
-      };
-  
       struct Uniforms {
         projection: mat4x4f,
         view: mat4x4f,
       };
+
+      //struct Settings {
+      //  scalingFactor: float,
+      //};
 
       struct VSOutput {
         @builtin(position) position: vec4f,
         @location(0) color: vec4f,
       }
 
-      @group(0) @binding(0) var<storage, read> triangleData: array<TriangleData>;
       @group(0) @binding(1) var<uniform> uni: Uniforms;
+      // feeding the positions from array directly
+      @group(0) @binding(2) var<storage, read> xPositions: array<f32>;
+      @group(0) @binding(3) var<storage, read> yPositions: array<f32>;
+      @group(0) @binding(4) var<storage, read> zPositions: array<f32>;
+      @group(0) @binding(5) var<storage, read> colors: array<vec4f>;
 
       @vertex fn vs(
         @builtin(vertex_index) vertexIndex : u32,
@@ -53,13 +74,19 @@ export async function initWebGPUStuff(canvas: HTMLCanvasElement) {
           vec2f( 0.5, -0.5)   // bottom right
         );
        
-        const scale = 0.1;
+        const scale = 0.1; //~ this is to scale the triangles themselves, not the positions
         var vsOut: VSOutput;
-        var instPos = triangleData[instanceIndex].position;
+        //var instPos = triangleData[instanceIndex].position;
+        var positionsScale = 0.1;
+        var x = xPositions[instanceIndex] * positionsScale;
+        var y = yPositions[instanceIndex] * positionsScale;
+        var z = zPositions[instanceIndex] * positionsScale;
+        var instPos = vec4f(x, y, z, 1.0);
         var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
         var transformedPos = uni.projection * uni.view * vertPos;
         vsOut.position = transformedPos;
-        vsOut.color = triangleData[instanceIndex].color;
+        //vsOut.color = triangleData[instanceIndex].color;
+        vsOut.color = colors[instanceIndex];
         return vsOut;
       }
  
@@ -83,21 +110,42 @@ export async function initWebGPUStuff(canvas: HTMLCanvasElement) {
     },
   });
 
-  /* -------- buffer setup --------  */
-  const numOfObjects = 100;
-  const a = generateRandomPoints(numOfObjects);
+  return pipeline;
+}
 
-  const dataBufferSize =
-    4 * 4 + // position is 4 32bit floats (4bytes each)
-    4 * 4   // color is 4 32bit floats (4bytes each)
-  const dataBuffer = device.createBuffer({
-    label: "buffer for positions + colors for each instance",
-    size: dataBufferSize * numOfObjects,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+export async function initWebGPUStuff(
+  canvas: HTMLCanvasElement,
+  xArray: Float32Array,
+  yArray: Float32Array,
+  zArray: Float32Array,
+) {
+  const adapter = await navigator.gpu?.requestAdapter();
+  const device = await adapter?.requestDevice();
+  if (!device) {
+    console.error('need a browser that supports WebGPU');
+    return;
+  }
+
+  // Get a WebGPU context from the canvas and configure it
+  const context = canvas.getContext('webgpu');
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  if (!context) {
+    console.error('failed when getting webgpu context');
+    return;
+  }
+  context.configure({
+    device,
+    format: presentationFormat,
   });
 
-  const dataValues = new Float32Array(a);
-  device.queue.writeBuffer(dataBuffer, 0, dataValues);
+  const pipeline = createShaders(device, presentationFormat);
+
+  const [xBuffer, yBuffer, zBuffer, colorsBuffer] = uploadDataToGPU(
+    device,
+    xArray,
+    yArray,
+    zArray,
+  );
 
   /* -------- buffer setup: uniforms (matrices) --------  */
   const uniformBufferSize = 4 * 16 * 2;
@@ -112,8 +160,12 @@ export async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
-      { binding: 0, resource: { buffer: dataBuffer } },
+      //{ binding: 0, resource: { buffer: dataBuffer } },
       { binding: 1, resource: { buffer: uniformBuffer } },
+      { binding: 2, resource: { buffer: xBuffer } },
+      { binding: 3, resource: { buffer: yBuffer } },
+      { binding: 4, resource: { buffer: zBuffer } },
+      { binding: 5, resource: { buffer: colorsBuffer } },
     ],
   });
 
@@ -136,7 +188,7 @@ export async function initWebGPUStuff(canvas: HTMLCanvasElement) {
   function render() {
     console.log("render()");
     //let requestId = requestAnimationFrame(render);
-    requestAnimationFrame(render);
+    //requestAnimationFrame(render);
     if (!device) {
       console.warn("device should not be null or undefined at this point!");
       return;
@@ -181,6 +233,7 @@ export async function initWebGPUStuff(canvas: HTMLCanvasElement) {
 
     device.queue.writeBuffer(uniformBuffer, 0, allUniformArrays);
 
+    const numOfObjects = xArray.length; //~ TODO: kinda hacky
     pass.setBindGroup(0, bindGroup);
     pass.draw(3, numOfObjects);
     pass.end();
