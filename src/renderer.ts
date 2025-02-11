@@ -57,6 +57,7 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         @location(0) color: vec4f,
       }
 
+      //~ TODO: unused binding position 0
       @group(0) @binding(1) var<uniform> uni: Uniforms;
       // feeding the positions from array directly
       @group(0) @binding(2) var<storage, read> xPositions: array<f32>;
@@ -68,6 +69,7 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         @builtin(vertex_index) vertexIndex : u32,
         @builtin(instance_index) instanceIndex: u32
       ) -> VSOutput {
+        //~ triangle geometry hardcoded here
         let pos = array(
           vec2f( 0.0,  0.5),  // top center
           vec2f(-0.5, -0.5),  // bottom left
@@ -75,17 +77,23 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         );
        
         const scale = 0.1; //~ this is to scale the triangles themselves, not the positions
+
         var vsOut: VSOutput;
-        //var instPos = triangleData[instanceIndex].position;
-        var positionsScale = 0.1;
+        var positionsScale = 0.1; //~ scaling the positions (TODO: actually normalize)
+
+        //~ constructing the world position from component buffers
         var x = xPositions[instanceIndex] * positionsScale;
         var y = yPositions[instanceIndex] * positionsScale;
         var z = zPositions[instanceIndex] * positionsScale;
         var instPos = vec4f(x, y, z, 1.0);
+
+        //~ calculate position of each instance vertex
         var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
+        //~ camera transform + projection
         var transformedPos = uni.projection * uni.view * vertPos;
+
+        //~ outputs for fragment shader
         vsOut.position = transformedPos;
-        //vsOut.color = triangleData[instanceIndex].color;
         vsOut.color = colors[instanceIndex];
         return vsOut;
       }
