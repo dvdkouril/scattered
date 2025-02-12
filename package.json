@@ -8,6 +8,7 @@
     "import": "./dist/scattered.js"
   },
   "files": ["dist"],
+  "main": "./dist/scattered.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
