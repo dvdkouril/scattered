@@ -56,6 +56,7 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       struct VSOutput {
         @builtin(position) position: vec4f,
         @location(0) color: vec4f,
+        @location(1) uv: vec2f,
       }
 
       //~ TODO: unused binding position 0
@@ -104,10 +105,14 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         //~ outputs for fragment shader
         vsOut.position = transformedPos;
         vsOut.color = colors[instanceIndex];
+        vsOut.uv = pos[vertexIndex];
         return vsOut;
       }
  
       @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+        if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
+            discard;
+        }
         return vsOut.color;
       }
     `,
