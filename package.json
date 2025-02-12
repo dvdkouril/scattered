@@ -1,9 +1,12 @@
 {
   "name": "scattered",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "David Kouřil <david.kouril@gmail.com>",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    "import": "./dist/scattered.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
