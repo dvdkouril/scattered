@@ -1,11 +1,13 @@
 {
   "name": "scattered",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "David Kouřil <david.kouril@gmail.com>",
   "license": "MIT",
   "type": "module",
   "exports": {
-    "import": "./dist/scattered.js"
+    ".": {
+      "import": "./dist/scattered.js"
+    }
   },
   "files": ["dist"],
   "main": "./dist/scattered.js",
