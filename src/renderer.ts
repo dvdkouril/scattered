@@ -1,4 +1,4 @@
-import { prepareViewMatrix, prepareCameraMatrix } from "./utils";
+import { prepareViewMatrix, prepareCameraMatrix } from "./utils.ts";
 import { vec3 } from "gl-matrix";
 
 export function uploadDataToGPU(
