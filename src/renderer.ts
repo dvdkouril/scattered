@@ -205,9 +205,13 @@ export async function initWebGPUStuff(
     ],
   };
 
-  let angle = 0;
-  const speed = 0.01;
-  const camera = new Camera();
+  let autoOrbiting = {
+    angle: 0,
+    speed: 0.01,
+    radius: 2,
+  };
+  let camera = new Camera();
+  let firstInteractionHappened = false;
 
   function render() {
     //console.log("render()");
@@ -239,13 +243,15 @@ export async function initWebGPUStuff(
 
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
-    //const radius = 2;
-    //const camX = Math.cos(angle) * radius;
-    //const camZ = Math.sin(angle) * radius;
-    //const cameraPosition = vec3.fromValues(camX, 0, camZ);
-    //console.log(`width: ${w}, height: ${h}`);
+    let cameraPosition: vec3;
+    if (!firstInteractionHappened) {
+      const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
+      const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
+      cameraPosition = vec3.fromValues(camX, 0, camZ);
+    } else {
+      cameraPosition = camera.getPosition();
+    }
     const projectionMatrix = prepareCameraMatrix(w, h);
-    const cameraPosition = camera.getPosition();
     const viewMatrix = prepareViewMatrix(cameraPosition);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
@@ -267,7 +273,12 @@ export async function initWebGPUStuff(
     const commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer]);
 
-    angle += speed * Math.PI / 12;
+    //~ yeah this is probably the worst way of doing this
+    const speed = autoOrbiting.speed;
+    autoOrbiting = {
+      ...autoOrbiting,
+      angle: autoOrbiting.angle += speed * Math.PI / 12
+    };
   }
 
 
@@ -285,6 +296,10 @@ export async function initWebGPUStuff(
   observer.observe(canvas);
 
   function onPointerDown(event: PointerEvent) {
+    if (!firstInteractionHappened) {
+      camera = new Camera(autoOrbiting.angle, autoOrbiting.radius);
+      firstInteractionHappened = true;
+    }
     camera.onPointerDown(event);
   }
 

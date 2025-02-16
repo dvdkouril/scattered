@@ -10,8 +10,10 @@ export class Camera {
   #radius = 2;
   #speed = 0.01;
 
-  constructor() {
+  constructor(angle: number = 0, radius: number = 2) {
     this.#dragStartPos = vec2.fromValues(0, 0);
+    this.#angle = angle;
+    this.#radius = radius;
   }
 
   getPosition(): vec3 {
