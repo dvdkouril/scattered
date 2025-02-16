@@ -1,5 +1,6 @@
 import { prepareViewMatrix, prepareCameraMatrix } from "./utils";
 import { vec3 } from "gl-matrix";
+import { Camera } from "./camera";
 
 export function uploadDataToGPU(
   device: GPUDevice,
@@ -206,9 +207,10 @@ export async function initWebGPUStuff(
 
   let angle = 0;
   const speed = 0.01;
+  const camera = new Camera();
 
   function render() {
-    console.log("render()");
+    //console.log("render()");
     //let requestId = requestAnimationFrame(render);
     requestAnimationFrame(render);
     if (!device) {
@@ -241,7 +243,7 @@ export async function initWebGPUStuff(
     const camX = Math.cos(angle) * radius;
     const camZ = Math.sin(angle) * radius;
     const cameraPosition = vec3.fromValues(camX, 0, camZ);
-    console.log(`width: ${w}, height: ${h}`);
+    //console.log(`width: ${w}, height: ${h}`);
     const projectionMatrix = prepareCameraMatrix(w, h);
     const viewMatrix = prepareViewMatrix(cameraPosition);
 
@@ -267,6 +269,7 @@ export async function initWebGPUStuff(
     angle += speed * Math.PI / 12;
   }
 
+
   const observer = new ResizeObserver(entries => {
     for (const entry of entries) {
       const canvas = entry.target as HTMLCanvasElement;
@@ -279,4 +282,19 @@ export async function initWebGPUStuff(
     }
   });
   observer.observe(canvas);
+
+  function onPointerDown(event: PointerEvent) {
+    camera.onPointerDown(event);
+  }
+
+  function onPointerUp(event: PointerEvent) {
+    camera.onPointerUp(event);
+  }
+
+  function onMouseMove(event: MouseEvent) {
+    camera.onMouseMove(event);
+  }
+  canvas.addEventListener("mousemove", onMouseMove);
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointerup", onPointerUp);
 }
