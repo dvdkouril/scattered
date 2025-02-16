@@ -239,12 +239,13 @@ export async function initWebGPUStuff(
 
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
-    const radius = 2;
-    const camX = Math.cos(angle) * radius;
-    const camZ = Math.sin(angle) * radius;
-    const cameraPosition = vec3.fromValues(camX, 0, camZ);
+    //const radius = 2;
+    //const camX = Math.cos(angle) * radius;
+    //const camZ = Math.sin(angle) * radius;
+    //const cameraPosition = vec3.fromValues(camX, 0, camZ);
     //console.log(`width: ${w}, height: ${h}`);
     const projectionMatrix = prepareCameraMatrix(w, h);
+    const cameraPosition = camera.getPosition();
     const viewMatrix = prepareViewMatrix(cameraPosition);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
