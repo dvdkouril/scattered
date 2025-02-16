@@ -310,7 +310,18 @@ export async function initWebGPUStuff(
   function onMouseMove(event: MouseEvent) {
     camera.onMouseMove(event);
   }
+
+  function onWheel(event: WheelEvent) {
+    if (!firstInteractionHappened) {
+      camera = new Camera(autoOrbiting.angle, autoOrbiting.radius);
+      firstInteractionHappened = true;
+    }
+    event.preventDefault();
+    camera.onWheel(event);
+  }
   canvas.addEventListener("mousemove", onMouseMove);
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("wheel", onWheel);
+  canvas.style.touchAction = 'none'; //~ disable page scroll
 }

@@ -45,4 +45,8 @@ export class Camera {
 
     this.#dragStartPos = vec2.fromValues(event.clientX, event.clientY);
   }
+
+  onWheel(event: WheelEvent) {
+    this.#radius += event.deltaY * 0.01;
+  }
 };
