@@ -1,0 +1,19 @@
+{
+  "name": "@dvdkouril/scattered",
+  "version": "0.0.6",
+  "license": "MIT",
+  "exports": "./src/main.ts",
+  "tasks": {
+    "dev": "deno -A npm:vite@6 --cors"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["@webgpu/types"]
+  },
+  "imports": {
+    "@uwdata/flechette": "npm:@uwdata/flechette@^1.1.2",
+    "@webgpu/types": "npm:@webgpu/types@^0.1.54",
+    "gl-matrix": "npm:gl-matrix@^3.4.3"
+  }
+}

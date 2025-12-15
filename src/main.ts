@@ -1,5 +1,5 @@
-import { loadDataFromURL } from "./loaders";
-import { initWebGPUStuff } from "./renderer";
+import { loadDataFromURL } from "./loaders.ts";
+import { initWebGPUStuff } from "./renderer.ts";
 import { tableFromIPC } from "@uwdata/flechette";
 
 function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array] {
