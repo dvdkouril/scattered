@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "3D scatterplots are useless, but fun"
 readme = "README.md"
 authors = [
-    { name = "David Kouril", email = "david.kouril@gmail.com" }
+    { name = "David Kouřil", email = "david.kouril@gmail.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
