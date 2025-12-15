@@ -7,7 +7,9 @@ authors = [
     { name = "David Kouril", email = "david.kouril@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "jupyterlab>=4.5.0",
+]
 
 [project.scripts]
 widget = "widget:main"
