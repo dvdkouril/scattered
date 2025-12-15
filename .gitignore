@@ -25,3 +25,6 @@ dist-ssr
 
 # ignore example notebooks
 notebooks
+# this is mostly to keep these from showing up in vim file explorer
+__pycache__
+.ipynb_checkpoints
