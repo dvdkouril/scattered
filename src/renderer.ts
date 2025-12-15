@@ -111,10 +111,11 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       }
  
       @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-        if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
-            discard;
-        }
+        //if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
+        //    discard;
+        //}
         return vsOut.color;
+        //return vec4f(vsOut.uv, 0, 1.0);
       }
     `,
   });
@@ -198,7 +199,7 @@ export async function initWebGPUStuff(
       {
         // view: <- to be filled out when we render
         view: context.getCurrentTexture().createView(), //~ had to add this to get rid of ts error
-        clearValue: [1.0, 1.0, 1.0, 1],
+        clearValue: [0.0, 0.0, 0.0, 1],
         loadOp: 'clear',
         storeOp: 'store',
       },
@@ -253,6 +254,8 @@ export async function initWebGPUStuff(
     }
     const projectionMatrix = prepareCameraMatrix(w, h);
     const viewMatrix = prepareViewMatrix(cameraPosition);
+    console.log("cameraPosition");
+    console.log(cameraPosition);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???

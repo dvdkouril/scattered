@@ -2,7 +2,7 @@ import { loadDataFromURL } from "./loaders";
 import { initWebGPUStuff } from "./renderer";
 import { tableFromIPC } from "@uwdata/flechette";
 
-function processArrow(b: ArrayBuffer): [Float32Array, Float32Array, Float32Array] {
+function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array] {
   const table = tableFromIPC(b);
   console.log("loaded table: ");
   console.log(table.schema);
@@ -10,13 +10,9 @@ function processArrow(b: ArrayBuffer): [Float32Array, Float32Array, Float32Array
   const columns = table.toColumns();
   console.log(columns);
 
-  //TODO: assert "x" in columns && "y" in columns && "z" in columns
-  const xArr = columns.x as Float32Array;
-  const yArr = columns.y as Float32Array;
-  const zArr = columns.z as Float32Array;
-  //console.log(xArr);
-  //console.log(yArr);
-  //console.log(zArr);
+  const xArr = xField ? columns[xField] as Float32Array : columns.x as Float32Array;
+  const yArr = yField ? columns[yField] as Float32Array : columns.y as Float32Array;
+  const zArr = zField ? columns[zField] as Float32Array : columns.z as Float32Array;
 
   //TODO: I guess I don't need to interlace: I can just put these to separate buffers
 
@@ -54,24 +50,37 @@ function processArrow(b: ArrayBuffer): [Float32Array, Float32Array, Float32Array
 //  return newArr;
 //}
 
-function display(url: string): HTMLCanvasElement {
+/**
+  * Displays a 3D scatterplot based on .arrow file provided as URL or an array of points.
+  *
+  * @param url - URL to the .arrow file or an array of points in the format [[x1, y1, z1], [x2, y2, z2], ...].
+  * @param x - (optional) Name of the field in the Arrow file for the x-coordinates.
+  * @param y - (optional) Name of the field in the Arrow file for the y-coordinates.
+  * @param z - (optional) Name of the field in the Arrow file for the z-coordinates.
+  * @param color - (optional) Name of the field in the Arrow file for the color values.
+  */
+function display(url: string | Array<Array<number>>, x?: string, y?: string, z?: string, color?: string): HTMLCanvasElement {
   const cEl = document.createElement("canvas");
   cEl.style.width = "100%";
 
-  console.log(`gonna fetch from ${url}`);
+  if (typeof url === 'string') {
+    console.log(`gonna fetch from ${url}`);
 
-  loadDataFromURL(url).then(d => {
-    if (d) {
-      console.log(`loaded data of size: ${d.byteLength}`);
+    loadDataFromURL(url).then(d => {
+      if (d) {
+        console.log(`loaded data of size: ${d.byteLength}`);
 
-      const points = processArrow(d);
+        const points = processArrow(d);
 
-      initWebGPUStuff(cEl, ...points);
-    } else {
-      console.log("failed fetching the data");
-    }
-    d?.byteLength
-  }).catch(_ => { console.log("failed fetching the data") });
+        initWebGPUStuff(cEl, ...points);
+      } else {
+        console.log("failed fetching the data");
+      }
+      d?.byteLength
+    }).catch(_ => { console.log("failed fetching the data") });
+  } else {
+    console.warn("not implemented!");
+  }
 
   return cEl;
 }

@@ -8,15 +8,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module">
-      import * as sctrd from "./src/main.ts";
-
-      const c = sctrd.display("https://raw.githubusercontent.com/dvdkouril/sample-3d-scatterplot-data/main/penguins.arrow");
-
-      let appEl = document.querySelector('#app');
-      if (c) {
-        appEl.appendChild(c);
-      }
+    <script type="module" src="src/demo.ts">
     </script>
   </body>
 </html>
