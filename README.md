@@ -1,19 +1,16 @@
-# scattered (scatter3D)
+# scattered: a composable library for 3D scatterplots
 
-*composable library for 3D scatterplots.*
+*3D scatterplots probably suck, but they're much more fun than regular scatterplots!*
 
 > [!CAUTION]
 > This project is as Work-In-Progress as it gets.
 <img width="863" alt="image" src="https://github.com/user-attachments/assets/7e63c09b-90ac-4c23-abcd-69e559e5dcce" />
 
-3D scatterplots probably suck, but they're much more fun than regular scatterplots!
-
-the basic idea is:
-- input: an arrow/parquet (just with 'x', 'y', 'z' columns)
-- zero dependencies (just vite, typescript for dev)
+The basic idea is:
+- arrow/dataframe as input (with 'x', 'y', 'z' columns)
+- minimal dependencies & small bundle size
 - webgpu rendering
-- minimal API for displaying 3D scatterplots in canvas
-- also a widget version, can consume numpy and pandas
+- javascript library (npm), jupyter widget (pypi), web page (like [quak](https://github.com/manzt/quak))
 
 ## usage
 
@@ -29,6 +26,10 @@ if (c) {
 ```
 
 ## about
+
+This project is developed by David Kouřil ([web](https://www.davidkouril.com),
+[bsky](https://bsky.app/profile/dvdkouril.xyz)).
+
 ### goals
 1. demonstrate composability principles
 2. learn a bit of webgpu
