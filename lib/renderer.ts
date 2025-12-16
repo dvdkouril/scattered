@@ -1,6 +1,7 @@
 import { prepareViewMatrix, prepareCameraMatrix } from "./utils";
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
+import { assert } from "./assert";
 
 export function uploadDataToGPU(
   device: GPUDevice,
@@ -218,14 +219,9 @@ export async function initWebGPUStuff(
     //console.log("render()");
     //let requestId = requestAnimationFrame(render);
     requestAnimationFrame(render);
-    if (!device) {
-      console.warn("device should not be null or undefined at this point!");
-      return;
-    }
-    if (!context) {
-      console.warn("context should not be null or undefined at this point!");
-      return;
-    }
+
+    assert(device, "device should not be null or undefined at this point!");
+    assert(context, "context should not be null or undefined at this point!");
 
     // Get the current texture from the canvas context and
     // set it as the texture to render to.
@@ -254,8 +250,8 @@ export async function initWebGPUStuff(
     }
     const projectionMatrix = prepareCameraMatrix(w, h);
     const viewMatrix = prepareViewMatrix(cameraPosition);
-    console.log("cameraPosition");
-    console.log(cameraPosition);
+    // console.log("cameraPosition");
+    // console.log(cameraPosition);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
