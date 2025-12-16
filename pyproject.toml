@@ -9,9 +9,14 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "anywidget>=0.9.21",
-    "jupyterlab>=4.5.0",
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4.5.0",
+    "plotly>=6.5.0",
 ]
 
 [project.scripts]
