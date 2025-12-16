@@ -3,15 +3,20 @@ import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
 
+/**
+ * Uploads the positional coordinate arrays to GPU buffers. 
+ * Also generates random colors (for now) and uploads them to a GPU buffer, too.
+ *
+ */
 export function uploadDataToGPU(
   device: GPUDevice,
   xPositionsArray: Float32Array,
   yPositionsArray: Float32Array,
   zPositionsArray: Float32Array
 ): [GPUBuffer, GPUBuffer, GPUBuffer, GPUBuffer] {
-  const uploadPositionBuffer = (bufferSize: number, dataValues: Float32Array) => {
+  const uploadPositionBuffer = (bufferSize: number, dataValues: Float32Array, label: string = "position buffer") => {
     const dataBuffer = device.createBuffer({
-      label: "buffer for x positions",
+      label: label,
       size: bufferSize,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -20,6 +25,9 @@ export function uploadDataToGPU(
   };
 
   const numOfPoints = xPositionsArray.length;
+  assert(yPositionsArray.length === numOfPoints, "number of y-coordinates should correspond to the number of x-coordinates.");
+  assert(zPositionsArray.length === numOfPoints, "number of z-coordinates should correspond to the number of x-coordinates.");
+
   /* generating random colors */
   const colorsArr: number[] = [];
   for (let i = 0; i < numOfPoints; i++) {
@@ -29,13 +37,13 @@ export function uploadDataToGPU(
 
   const bufferSize = 4 * 4 * numOfPoints;
   /* x buffer */
-  const xBuffer = uploadPositionBuffer(bufferSize, xPositionsArray);
+  const xBuffer = uploadPositionBuffer(bufferSize, xPositionsArray, "buffer for x positions");
   /* y buffer */
-  const yBuffer = uploadPositionBuffer(bufferSize, yPositionsArray);
+  const yBuffer = uploadPositionBuffer(bufferSize, yPositionsArray, "buffer for y positions");
   /* z buffer */
-  const zBuffer = uploadPositionBuffer(bufferSize, zPositionsArray);
+  const zBuffer = uploadPositionBuffer(bufferSize, zPositionsArray, "buffer for z positions");
   /* colors buffer: TODO: kinda semantically not correct */
-  const colBuffer = uploadPositionBuffer(bufferSize, new Float32Array(colorsArr));
+  const colBuffer = uploadPositionBuffer(bufferSize, new Float32Array(colorsArr), "buffer for colors");
 
   return [xBuffer, yBuffer, zBuffer, colBuffer];
 }
@@ -241,6 +249,7 @@ export async function initWebGPUStuff(
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     let cameraPosition: vec3;
+    firstInteractionHappened = true; //~ turning off the auto orbiting for now
     if (!firstInteractionHappened) {
       const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
       const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
