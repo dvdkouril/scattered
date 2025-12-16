@@ -53,18 +53,20 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
 /**
   * Displays a 3D scatterplot based on .arrow file provided as URL or an array of points.
   *
-  * @param url - URL to the .arrow file or an array of points in the format [[x1, y1, z1], [x2, y2, z2], ...].
+  * @param input - URL to the .arrow file or an array of points in the format [[x1, y1, z1], [x2, y2, z2], ...].
   * @param x - (optional) Name of the field in the Arrow file for the x-coordinates.
   * @param y - (optional) Name of the field in the Arrow file for the y-coordinates.
   * @param z - (optional) Name of the field in the Arrow file for the z-coordinates.
   * @param color - (optional) Name of the field in the Arrow file for the color values.
   */
-function display(url: string | Array<Array<number>>, x?: string, y?: string, z?: string, color?: string): HTMLCanvasElement {
+function display(input: string | Array<Array<number>> | ArrayBuffer, x: string = "x", y: string = "y", z: string = "z", color?: string): HTMLCanvasElement {
   const cEl = document.createElement("canvas");
   cEl.style.width = "100%";
 
-  if (typeof url === 'string') {
-    console.log(`gonna fetch from ${url}`);
+  if (typeof input === 'string') {
+    //~ assuming it's a URL
+    const url = input;
+    console.log(`display::gonna fetch from ${url}`);
 
     loadDataFromURL(url).then(d => {
       if (d) {
@@ -76,8 +78,11 @@ function display(url: string | Array<Array<number>>, x?: string, y?: string, z?:
       } else {
         console.log("failed fetching the data");
       }
-      d?.byteLength
     }).catch(_ => { console.log("failed fetching the data") });
+  } else if (input instanceof ArrayBuffer) {
+    console.log(`display::using Arrow bytes (${input.byteLength})`);
+    const points = processArrow(input, x, y, z, color);
+    initWebGPUStuff(cEl, ...points);
   } else {
     console.warn("not implemented!");
   }
