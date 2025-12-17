@@ -35,15 +35,15 @@ export function uploadDataToGPU(
     colorsArr.push(...rgb);
   }
 
-  const bufferSize = 4 * 4 * numOfPoints;
   /* x buffer */
-  const xBuffer = uploadPositionBuffer(bufferSize, xPositionsArray, "buffer for x positions");
+  const xBuffer = uploadPositionBuffer(xPositionsArray.byteLength, xPositionsArray, "buffer for x positions");
   /* y buffer */
-  const yBuffer = uploadPositionBuffer(bufferSize, yPositionsArray, "buffer for y positions");
+  const yBuffer = uploadPositionBuffer(yPositionsArray.byteLength, yPositionsArray, "buffer for y positions");
   /* z buffer */
-  const zBuffer = uploadPositionBuffer(bufferSize, zPositionsArray, "buffer for z positions");
+  const zBuffer = uploadPositionBuffer(zPositionsArray.byteLength, zPositionsArray, "buffer for z positions");
   /* colors buffer: TODO: kinda semantically not correct */
-  const colBuffer = uploadPositionBuffer(bufferSize, new Float32Array(colorsArr), "buffer for colors");
+  const colorsTypedArray = new Float32Array(colorsArr);
+  const colBuffer = uploadPositionBuffer(colorsTypedArray.byteLength, colorsTypedArray, "buffer for colors");
 
   return [xBuffer, yBuffer, zBuffer, colBuffer];
 }
