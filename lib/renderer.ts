@@ -120,9 +120,9 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       }
  
       @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-        //if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
-        //    discard;
-        //}
+        if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
+           discard;
+        }
         return vsOut.color;
         //return vec4f(vsOut.uv, 0, 1.0);
       }
