@@ -249,7 +249,7 @@ export async function initWebGPUStuff(
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     let cameraPosition: vec3;
-    firstInteractionHappened = true; //~ turning off the auto orbiting for now
+    // firstInteractionHappened = true; //~ turning off the auto orbiting for now
     if (!firstInteractionHappened) {
       const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
       const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
