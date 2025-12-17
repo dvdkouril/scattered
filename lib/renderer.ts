@@ -102,13 +102,13 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         //~ impostors: align to alway face camera
         var eyeToPos = normalize(instPos - uni.eyePosition);
         var upVec = vec3f(0.0, 1.0, 0.0);
-        var rightVec = cross(eyeToPos.xyz, upVec);
+        var rightVec = cross(upVec, eyeToPos.xyz);
         var v = pos[vertexIndex] * scale;
         var vPos = v.x * rightVec + v.y * upVec;
 
         //~ calculate position of each instance vertex
         //var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
-        var vertPos = instPos + vec4f(vPos, 1.0);
+        var vertPos = instPos + vec4f(vPos, 0.0);
         //~ camera transform + projection
         var transformedPos = uni.projection * uni.view * vertPos;
 
