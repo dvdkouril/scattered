@@ -141,6 +141,11 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       module,
       targets: [{ format: presentationFormat }],
     },
+    depthStencil: {
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      format: 'depth24plus',
+    },
   });
 
   return pipeline;
@@ -202,6 +207,12 @@ export async function initWebGPUStuff(
     ],
   });
 
+  const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
   const renderPassDescriptor: GPURenderPassDescriptor = {
     label: 'our basic canvas renderPass',
     colorAttachments: [
@@ -213,6 +224,12 @@ export async function initWebGPUStuff(
         storeOp: 'store',
       },
     ],
+    depthStencilAttachment: {
+      view: depthTexture.createView(),
+      depthClearValue: 1.0,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
+    },
   };
 
   let autoOrbiting = {
@@ -297,6 +314,18 @@ export async function initWebGPUStuff(
       const height = entry.contentBoxSize[0].blockSize;
       canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
       canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+
+      const newDepthTexture = device.createTexture({
+        size: [canvas.width, canvas.height],
+        format: "depth24plus",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+      depthTexture.destroy(); //~ clean up old texture
+      renderPassDescriptor.depthStencilAttachment = {
+        ...renderPassDescriptor.depthStencilAttachment,
+        view: newDepthTexture.createView(),
+      };
+
       // re-render
       render();
     }

@@ -24,7 +24,7 @@ function prepareLinearExample(): HTMLCanvasElement {
 }
 
 function prepareRandomExample(): HTMLCanvasElement {
-  const coords = generateRandomPoints(100, 10);
+  const coords = generateRandomPoints(100000, 30);
   const coordsTable = tableFromArrays(coords);
   console.log(coords);
 
