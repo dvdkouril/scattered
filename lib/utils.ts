@@ -4,8 +4,8 @@ export function prepareCameraMatrix(width: number, height: number): mat4 {
 
   const projMat = mat4.create();
   const fovy = Math.PI / 4.0;
-  const near = 10.0;
-  const far = 0.1;
+  const near = 0.1;
+  const far = 10.0;
   const aspect = width / height;
   // https://github.com/toji/gl-matrix/pull/413
   mat4.perspectiveZO(projMat, fovy, aspect, near, far);

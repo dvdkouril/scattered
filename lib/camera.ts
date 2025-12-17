@@ -33,7 +33,7 @@ export class Camera {
   }
 
   onMouseMove(event: MouseEvent) {
-    console.log(`${event.clientX}, ${event.clientY}`);
+    // console.log(`${event.clientX}, ${event.clientY}`);
     if (!this.#dragging) {
       return;
     }

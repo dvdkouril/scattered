@@ -1,16 +1,22 @@
 import { prepareViewMatrix, prepareCameraMatrix } from "./utils";
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
+import { assert } from "./assert";
 
+/**
+ * Uploads the positional coordinate arrays to GPU buffers. 
+ * Also generates random colors (for now) and uploads them to a GPU buffer, too.
+ *
+ */
 export function uploadDataToGPU(
   device: GPUDevice,
   xPositionsArray: Float32Array,
   yPositionsArray: Float32Array,
   zPositionsArray: Float32Array
 ): [GPUBuffer, GPUBuffer, GPUBuffer, GPUBuffer] {
-  const uploadPositionBuffer = (bufferSize: number, dataValues: Float32Array) => {
+  const uploadPositionBuffer = (bufferSize: number, dataValues: Float32Array, label: string = "position buffer") => {
     const dataBuffer = device.createBuffer({
-      label: "buffer for x positions",
+      label: label,
       size: bufferSize,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -19,6 +25,9 @@ export function uploadDataToGPU(
   };
 
   const numOfPoints = xPositionsArray.length;
+  assert(yPositionsArray.length === numOfPoints, "number of y-coordinates should correspond to the number of x-coordinates.");
+  assert(zPositionsArray.length === numOfPoints, "number of z-coordinates should correspond to the number of x-coordinates.");
+
   /* generating random colors */
   const colorsArr: number[] = [];
   for (let i = 0; i < numOfPoints; i++) {
@@ -26,15 +35,15 @@ export function uploadDataToGPU(
     colorsArr.push(...rgb);
   }
 
-  const bufferSize = 4 * 4 * numOfPoints;
   /* x buffer */
-  const xBuffer = uploadPositionBuffer(bufferSize, xPositionsArray);
+  const xBuffer = uploadPositionBuffer(xPositionsArray.byteLength, xPositionsArray, "buffer for x positions");
   /* y buffer */
-  const yBuffer = uploadPositionBuffer(bufferSize, yPositionsArray);
+  const yBuffer = uploadPositionBuffer(yPositionsArray.byteLength, yPositionsArray, "buffer for y positions");
   /* z buffer */
-  const zBuffer = uploadPositionBuffer(bufferSize, zPositionsArray);
+  const zBuffer = uploadPositionBuffer(zPositionsArray.byteLength, zPositionsArray, "buffer for z positions");
   /* colors buffer: TODO: kinda semantically not correct */
-  const colBuffer = uploadPositionBuffer(bufferSize, new Float32Array(colorsArr));
+  const colorsTypedArray = new Float32Array(colorsArr);
+  const colBuffer = uploadPositionBuffer(colorsTypedArray.byteLength, colorsTypedArray, "buffer for colors");
 
   return [xBuffer, yBuffer, zBuffer, colBuffer];
 }
@@ -93,13 +102,13 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         //~ impostors: align to alway face camera
         var eyeToPos = normalize(instPos - uni.eyePosition);
         var upVec = vec3f(0.0, 1.0, 0.0);
-        var rightVec = cross(eyeToPos.xyz, upVec);
+        var rightVec = cross(upVec, eyeToPos.xyz);
         var v = pos[vertexIndex] * scale;
         var vPos = v.x * rightVec + v.y * upVec;
 
         //~ calculate position of each instance vertex
         //var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
-        var vertPos = instPos + vec4f(vPos, 1.0);
+        var vertPos = instPos + vec4f(vPos, 0.0);
         //~ camera transform + projection
         var transformedPos = uni.projection * uni.view * vertPos;
 
@@ -111,9 +120,9 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       }
  
       @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-        //if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
-        //    discard;
-        //}
+        if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
+           discard;
+        }
         return vsOut.color;
         //return vec4f(vsOut.uv, 0, 1.0);
       }
@@ -131,6 +140,11 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
       entryPoint: 'fs',
       module,
       targets: [{ format: presentationFormat }],
+    },
+    depthStencil: {
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      format: 'depth24plus',
     },
   });
 
@@ -193,6 +207,12 @@ export async function initWebGPUStuff(
     ],
   });
 
+  const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
   const renderPassDescriptor: GPURenderPassDescriptor = {
     label: 'our basic canvas renderPass',
     colorAttachments: [
@@ -204,6 +224,12 @@ export async function initWebGPUStuff(
         storeOp: 'store',
       },
     ],
+    depthStencilAttachment: {
+      view: depthTexture.createView(),
+      depthClearValue: 1.0,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
+    },
   };
 
   let autoOrbiting = {
@@ -218,14 +244,9 @@ export async function initWebGPUStuff(
     //console.log("render()");
     //let requestId = requestAnimationFrame(render);
     requestAnimationFrame(render);
-    if (!device) {
-      console.warn("device should not be null or undefined at this point!");
-      return;
-    }
-    if (!context) {
-      console.warn("context should not be null or undefined at this point!");
-      return;
-    }
+
+    assert(device, "device should not be null or undefined at this point!");
+    assert(context, "context should not be null or undefined at this point!");
 
     // Get the current texture from the canvas context and
     // set it as the texture to render to.
@@ -245,6 +266,7 @@ export async function initWebGPUStuff(
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     let cameraPosition: vec3;
+    // firstInteractionHappened = true; //~ turning off the auto orbiting for now
     if (!firstInteractionHappened) {
       const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
       const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
@@ -254,8 +276,8 @@ export async function initWebGPUStuff(
     }
     const projectionMatrix = prepareCameraMatrix(w, h);
     const viewMatrix = prepareViewMatrix(cameraPosition);
-    console.log("cameraPosition");
-    console.log(cameraPosition);
+    // console.log("cameraPosition");
+    // console.log(cameraPosition);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
@@ -292,6 +314,18 @@ export async function initWebGPUStuff(
       const height = entry.contentBoxSize[0].blockSize;
       canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
       canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+
+      const newDepthTexture = device.createTexture({
+        size: [canvas.width, canvas.height],
+        format: "depth24plus",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+      depthTexture.destroy(); //~ clean up old texture
+      renderPassDescriptor.depthStencilAttachment = {
+        ...renderPassDescriptor.depthStencilAttachment,
+        view: newDepthTexture.createView(),
+      };
+
       // re-render
       render();
     }

@@ -2,7 +2,8 @@ import * as sctrd from "./main.ts";
 import { tableFromArrays, tableToIPC } from "@uwdata/flechette";
 import { assert } from "./assert.ts";
 
-const c = prepareLinearExample();
+// const c = prepareLinearExample();
+const c = prepareRandomExample();
 
 let appEl = document.querySelector('#app');
 if (c && appEl) {
@@ -16,6 +17,19 @@ function prepareLinearExample(): HTMLCanvasElement {
 
   assert(linCoordsTable, "gotta be able to make a table from linCoords");
   const tableIPC = tableToIPC(linCoordsTable, {});
+  assert(tableIPC, "gotta be able to make an IPC from the table");
+
+  const c = sctrd.display(tableIPC.buffer);
+  return c;
+}
+
+function prepareRandomExample(): HTMLCanvasElement {
+  const coords = generateRandomPoints(100000, 30);
+  const coordsTable = tableFromArrays(coords);
+  console.log(coords);
+
+  assert(coordsTable, "gotta be able to make a table from linCoords");
+  const tableIPC = tableToIPC(coordsTable, {});
   assert(tableIPC, "gotta be able to make an IPC from the table");
 
   const c = sctrd.display(tableIPC.buffer);
@@ -46,6 +60,21 @@ function generateLinearSequence(numPoints: number): CoordArrays {
     points.x.push(i * step);
     points.y.push(i * step);
     points.z.push(i * step);
+  }
+  return points;
+}
+
+function generateRandomPoints(numPoints: number, scale: number = 1.0): CoordArrays {
+  const points = {
+    x: new Array<number>(),
+    y: new Array<number>(),
+    z: new Array<number>(),
+  };
+
+  for (let i = 0; i < numPoints; i++) {
+    points.x.push(Math.random() * scale - scale / 2);
+    points.y.push(Math.random() * scale - scale / 2);
+    points.z.push(Math.random() * scale - scale / 2);
   }
   return points;
 }
