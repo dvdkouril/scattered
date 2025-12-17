@@ -8,9 +8,15 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   console.log(table.schema);
 
   const columns = table.toColumns();
-  const xArr = xField ? columns[xField] as Float32Array : columns.x as Float32Array;
-  const yArr = yField ? columns[yField] as Float32Array : columns.y as Float32Array;
-  const zArr = zField ? columns[zField] as Float32Array : columns.z as Float32Array;
+  //~ By default, look for "x", "y", "z" fields, but use other fields if specified
+  const xKey = xField ? xField : "x";
+  const yKey = yField ? yField : "y";
+  const zKey = zField ? zField : "z";
+  // Convert to Float32Array since shader expects f32, not f64
+  // flechette outputs Float type column to `number[]` which is 64-bit float
+  const xArr = new Float32Array(columns[xKey]);
+  const yArr = new Float32Array(columns[yKey]);
+  const zArr = new Float32Array(columns[zKey]);
 
   // TODO: normalize here or in shader? still need to find the bounds
   //const newXArr = normalize(xArr as Float32Array);
