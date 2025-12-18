@@ -1,4 +1,4 @@
-import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray } from "./utils";
+import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, pickRandomBackgroundColor } from "./utils";
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
@@ -215,7 +215,7 @@ export async function initWebGPUStuff(
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
-  const bgColor = options?.backgroundColor ? options.backgroundColor : "#ffffff";
+  const bgColor = options?.backgroundColor ? options.backgroundColor : pickRandomBackgroundColor("light");
   const bgColorArr = hexColorToFloatArray(bgColor);
 
   const renderPassDescriptor: GPURenderPassDescriptor = {

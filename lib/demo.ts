@@ -33,7 +33,8 @@ function prepareRandomExample(): HTMLCanvasElement {
   const tableIPC = tableToIPC(coordsTable, {});
   assert(tableIPC, "gotta be able to make an IPC from the table");
 
-  const c = sctrd.display(tableIPC.buffer, { backgroundColor: "#e6e6fa" });
+  // const c = sctrd.display(tableIPC.buffer, { backgroundColor: "#e6e6fa" });
+  const c = sctrd.display(tableIPC.buffer);
   return c;
 }
 

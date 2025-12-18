@@ -59,3 +59,29 @@ export function hexColorToFloatArray(color: string): number[] {
 
   return [r, g, b].map(v => v / 255);
 }
+
+export function pickRandomBackgroundColor(mode?: string): string {
+  const lightColors = [
+    "#f0ffff", // azure
+    "#f0f8ff", // aliceblue
+    "#fff8dc", // cornsilk
+    "#f8f8ff", // ghostwhite
+    "#f0fff0", // honeydew
+    "#fff0f5", // lavenderblush
+  ];
+  const darkColors = [
+    "#6a5acd", // slateblue
+    "#000080", // navy
+    "#2f4f4f", // darkslategray
+    "#006400", // darkgreen
+  ];
+
+  if (mode === "light") {
+    return lightColors[Math.floor(Math.random() * lightColors.length)];
+  } else if (mode === "dark") {
+    return darkColors[Math.floor(Math.random() * darkColors.length)];
+  } else {
+    const allColors = lightColors.concat(darkColors);
+    return allColors[Math.floor(Math.random() * allColors.length)];
+  }
+}
