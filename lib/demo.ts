@@ -19,12 +19,13 @@ function prepareLinearExample(): HTMLCanvasElement {
   const tableIPC = tableToIPC(linCoordsTable, {});
   assert(tableIPC, "gotta be able to make an IPC from the table");
 
-  const c = sctrd.display(tableIPC.buffer);
+  const c = sctrd.display(tableIPC.buffer, { backgroundColor: "#000000" });
   return c;
 }
 
 function prepareRandomExample(): HTMLCanvasElement {
-  const coords = generateRandomPoints(100000, 30);
+  const coords = generateRandomPoints(100, 10);
+  // const coords = generateRandomPoints(100000, 30);
   const coordsTable = tableFromArrays(coords);
   console.log(coords);
 
@@ -32,6 +33,7 @@ function prepareRandomExample(): HTMLCanvasElement {
   const tableIPC = tableToIPC(coordsTable, {});
   assert(tableIPC, "gotta be able to make an IPC from the table");
 
+  // const c = sctrd.display(tableIPC.buffer, { backgroundColor: "#e6e6fa" });
   const c = sctrd.display(tableIPC.buffer);
   return c;
 }

@@ -1,7 +1,8 @@
-import { prepareViewMatrix, prepareCameraMatrix } from "./utils";
+import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, pickRandomBackgroundColor } from "./utils";
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
+import { DisplayOptions } from "./types.ts";
 
 /**
  * Uploads the positional coordinate arrays to GPU buffers. 
@@ -156,6 +157,7 @@ export async function initWebGPUStuff(
   xArray: Float32Array,
   yArray: Float32Array,
   zArray: Float32Array,
+  options?: DisplayOptions,
 ) {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
@@ -213,13 +215,16 @@ export async function initWebGPUStuff(
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
+  const bgColor = options?.backgroundColor ? options.backgroundColor : pickRandomBackgroundColor("light");
+  const bgColorArr = hexColorToFloatArray(bgColor);
+
   const renderPassDescriptor: GPURenderPassDescriptor = {
     label: 'our basic canvas renderPass',
     colorAttachments: [
       {
         // view: <- to be filled out when we render
         view: context.getCurrentTexture().createView(), //~ had to add this to get rid of ts error
-        clearValue: [0.0, 0.0, 0.0, 1],
+        clearValue: [...bgColorArr, 1],
         loadOp: 'clear',
         storeOp: 'store',
       },

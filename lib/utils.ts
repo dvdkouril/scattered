@@ -41,3 +41,47 @@ function rand(min?: number, max?: number): number {
   }
   return min + Math.random() * (max - min);
 }
+
+export function hexColorToFloatArray(color: string): number[] {
+  // remove leading #
+  color = color.replace(/^#/, '');
+
+  // handle short form "#RGB"
+  if (color.length === 3) {
+    color = color.split('').map(c => c + c).join('');
+  }
+
+  const int = parseInt(color, 16);
+
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+
+  return [r, g, b].map(v => v / 255);
+}
+
+export function pickRandomBackgroundColor(mode?: string): string {
+  const lightColors = [
+    "#f0ffff", // azure
+    "#f0f8ff", // aliceblue
+    "#fff8dc", // cornsilk
+    "#f8f8ff", // ghostwhite
+    "#f0fff0", // honeydew
+    "#fff0f5", // lavenderblush
+  ];
+  const darkColors = [
+    "#6a5acd", // slateblue
+    "#000080", // navy
+    "#2f4f4f", // darkslategray
+    "#006400", // darkgreen
+  ];
+
+  if (mode === "light") {
+    return lightColors[Math.floor(Math.random() * lightColors.length)];
+  } else if (mode === "dark") {
+    return darkColors[Math.floor(Math.random() * darkColors.length)];
+  } else {
+    const allColors = lightColors.concat(darkColors);
+    return allColors[Math.floor(Math.random() * allColors.length)];
+  }
+}
