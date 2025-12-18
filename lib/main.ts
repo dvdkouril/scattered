@@ -1,6 +1,7 @@
-import { loadDataFromURL } from "./loaders";
-import { initWebGPUStuff } from "./renderer";
+import { loadDataFromURL } from "./loaders.ts";
+import { initWebGPUStuff } from "./renderer.ts";
 import { tableFromIPC } from "@uwdata/flechette";
+import { DisplayOptions } from "./types.ts";
 
 function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array] {
   const table = tableFromIPC(b);
@@ -36,7 +37,7 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   * @param z - (optional) Name of the field in the Arrow file for the z-coordinates.
   * @param color - (optional) Name of the field in the Arrow file for the color values.
   */
-function display(input: string | Array<Array<number>> | ArrayBuffer, x: string = "x", y: string = "y", z: string = "z", color?: string): HTMLCanvasElement {
+function display(input: string | Array<Array<number>> | ArrayBuffer, options?: DisplayOptions, x: string = "x", y: string = "y", z: string = "z", color?: string): HTMLCanvasElement {
   const cEl = document.createElement("canvas");
   cEl.style.width = "100%";
 
@@ -51,7 +52,7 @@ function display(input: string | Array<Array<number>> | ArrayBuffer, x: string =
 
         const points = processArrow(d);
 
-        initWebGPUStuff(cEl, ...points);
+        initWebGPUStuff(cEl, ...points, options);
       } else {
         console.log("failed fetching the data");
       }
@@ -59,7 +60,7 @@ function display(input: string | Array<Array<number>> | ArrayBuffer, x: string =
   } else if (input instanceof ArrayBuffer) {
     console.log(`display::using Arrow bytes (${input.byteLength})`);
     const points = processArrow(input, x, y, z, color);
-    initWebGPUStuff(cEl, ...points);
+    initWebGPUStuff(cEl, ...points, options);
   } else {
     console.warn("not implemented!");
   }

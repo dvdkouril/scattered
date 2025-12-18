@@ -41,3 +41,21 @@ function rand(min?: number, max?: number): number {
   }
   return min + Math.random() * (max - min);
 }
+
+export function hexColorToFloatArray(color: string): number[] {
+  // remove leading #
+  color = color.replace(/^#/, '');
+
+  // handle short form "#RGB"
+  if (color.length === 3) {
+    color = color.split('').map(c => c + c).join('');
+  }
+
+  const int = parseInt(color, 16);
+
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+
+  return [r, g, b].map(v => v / 255);
+}
