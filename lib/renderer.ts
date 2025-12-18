@@ -224,7 +224,6 @@ export async function initWebGPUStuff(
       {
         // view: <- to be filled out when we render
         view: context.getCurrentTexture().createView(), //~ had to add this to get rid of ts error
-        // clearValue: [1.0, 0.0, 0.0, 1],
         clearValue: [...bgColorArr, 1],
         loadOp: 'clear',
         storeOp: 'store',
