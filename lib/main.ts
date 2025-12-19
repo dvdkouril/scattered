@@ -1,10 +1,11 @@
 import { loadDataFromURL } from "./loaders.ts";
 import { initWebGPUStuff } from "./renderer.ts";
 import { tableFromIPC } from "@uwdata/flechette";
-import { DisplayOptions } from "./types.ts";
+import { DisplayOptions, Encoding } from "./types.ts";
 import { assert } from "./assert.ts";
 import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
+import { isBrewerPaletteName } from "./utils.ts";
 
 function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array, Float32Array];
 function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array];
@@ -23,12 +24,6 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   const xArr = new Float32Array(columns[xKey]);
   const yArr = new Float32Array(columns[yKey]);
   const zArr = new Float32Array(columns[zKey]);
-
-  // TODO: normalize here or in shader? still need to find the bounds
-  //const newXArr = normalize(xArr as Float32Array);
-  //const newYArr = normalize(yArr as Float32Array);
-  //const newZArr = normalize(zArr as Float32Array);
-  //console.log(`newXArr: ${newXArr}`);
 
   /*
    * If the `colorField` is specified, this means that we want to grab that column and:
@@ -54,18 +49,6 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   }
 
   return [xArr, yArr, zArr, defaultColors];
-}
-
-/*
- * Asserting function for checking if a string is a valid chroma.js Brewer palette name
- */
-export function isBrewerPaletteName(
-  colorString: string,
-): colorString is chroma.BrewerPaletteName {
-  const brewerPalettes = Object.keys(chroma.brewer).map((name) =>
-    name.toLowerCase(),
-  );
-  return brewerPalettes.includes(colorString.toLowerCase());
 }
 
 /*
@@ -175,15 +158,19 @@ function mapQuantitativeValuesToColors(
   */
 function display(
   input: string | Array<Array<number>> | ArrayBuffer,
+  encoding?: Encoding,
   options?: DisplayOptions,
-  //~ TODO: just put these into an 'encoding' object, so that it doesn't matter which one of these you want and need to define
-  color?: string,
-  x: string = "x",
-  y: string = "y",
-  z: string = "z"
 ): HTMLCanvasElement {
   const cEl = document.createElement("canvas");
   cEl.style.width = "100%";
+
+  //~ defaults
+  const {
+    x = "x",
+    y = "y",
+    z = "z",
+    color = undefined
+  } = encoding || {};
 
   if (typeof input === 'string') {
     //~ assuming it's a URL
@@ -194,8 +181,7 @@ function display(
       if (d) {
         console.log(`loaded data of size: ${d.byteLength}`);
 
-        const points = processArrow(d);
-
+        const points = processArrow(d, x, y, z, color);
         initWebGPUStuff(cEl, ...points, options);
       } else {
         console.log("failed fetching the data");

@@ -1,3 +1,4 @@
+import chroma from "chroma-js";
 import { vec3, mat4 } from "gl-matrix";
 
 export function prepareCameraMatrix(width: number, height: number): mat4 {
@@ -84,4 +85,16 @@ export function pickRandomBackgroundColor(mode?: string): string {
     const allColors = lightColors.concat(darkColors);
     return allColors[Math.floor(Math.random() * allColors.length)];
   }
+}
+
+/*
+ * Asserting function for checking if a string is a valid chroma.js Brewer palette name
+ */
+export function isBrewerPaletteName(
+  colorString: string,
+): colorString is chroma.BrewerPaletteName {
+  const brewerPalettes = Object.keys(chroma.brewer).map((name) =>
+    name.toLowerCase(),
+  );
+  return brewerPalettes.includes(colorString.toLowerCase());
 }
