@@ -11,6 +11,8 @@ dependencies = [
     "anywidget>=0.9.21",
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",
+    "scikit-learn>=1.8.0",
+    "umap-learn>=0.5.9.post2",
 ]
 
 [dependency-groups]
