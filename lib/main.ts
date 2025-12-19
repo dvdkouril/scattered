@@ -44,7 +44,16 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
     return [xArr, yArr, zArr, colorsBuffer];
   }
 
-  return [xArr, yArr, zArr];
+  //~ if the colorField is not specified, build the buffer with a default color
+  const defaultColors = new Float32Array(xArr.length * 4);
+  const defaultColor = chroma("crimson");
+  const col = defaultColor.gl();
+
+  for (let i = 0; i < defaultColors.length; i += 4) {
+    defaultColors.set(col, i);
+  }
+
+  return [xArr, yArr, zArr, defaultColors];
 }
 
 /*
@@ -74,7 +83,7 @@ function mapValuesToColors(
   }
 
   //~ quantitative data
-  return mapQuantitativeValuesToColors();
+  return mapQuantitativeValuesToColors(values, colorScale);
 }
 
 function mapQualitativeValuesToColors(values: string[], colorScale: string | string[]): Float32Array {
@@ -85,6 +94,10 @@ function mapQualitativeValuesToColors(values: string[], colorScale: string | str
 
   const mapColorsValues = new Map<string, ChromaColor>();
 
+  //~ asserting that the colorScale supplied is a valid chroma scale
+  if (typeof colorScale === "string") {
+    assert(isBrewerPaletteName(colorScale));
+  }
 
   let colors: string[] = [];
   if (typeof colorScale === "string") {
@@ -102,7 +115,8 @@ function mapQualitativeValuesToColors(values: string[], colorScale: string | str
   const correspondingColors = values.map((v) => mapColorsValues.get(v) || defaultColor);
   const colorsAsNumbers = correspondingColors.map((c) => {
     const rgb = c.gl(); // should be same as .rgb, but in 0..1 range
-    return [rgb[0], rgb[1], rgb[2]]; //~ making sure to _never_ keep the alpha channel (no matter the chroma API)
+    // return [rgb[0], rgb[1], rgb[2]]; //~ making sure to _never_ keep the alpha channel (no matter the chroma API)
+    return [rgb[0], rgb[1], rgb[2], 1.0]; //~ outputting alpha just to make it more consistent
   }).flat();
   return Float32Array.from(colorsAsNumbers);
 }
