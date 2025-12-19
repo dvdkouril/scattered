@@ -34,7 +34,8 @@ function prepareRandomExample(): HTMLCanvasElement {
   assert(tableIPC, "gotta be able to make an IPC from the table");
 
   // const c = sctrd.display(tableIPC.buffer, { backgroundColor: "#e6e6fa" });
-  const c = sctrd.display(tableIPC.buffer);
+  // const c = sctrd.display(tableIPC.buffer);
+  const c = sctrd.display(tableIPC.buffer, {}, "category");
   return c;
 }
 
@@ -44,7 +45,12 @@ function preparePenguinsExample(): HTMLCanvasElement {
   return c;
 }
 
-type CoordArrays = { x: Array<number>, y: Array<number>, z: Array<number> };
+type CoordArrays = {
+  x: Array<number>,
+  y: Array<number>,
+  z: Array<number>,
+  category?: Array<string>,
+};
 
 /**
   * Generates a linear sequence of 3D coordinates, from [0, 0, 0] to [1, 1, 1].
@@ -71,12 +77,16 @@ function generateRandomPoints(numPoints: number, scale: number = 1.0): CoordArra
     x: new Array<number>(),
     y: new Array<number>(),
     z: new Array<number>(),
+    category: new Array<string>(),
   };
+
+  const categories = ["A", "B", "C"];
 
   for (let i = 0; i < numPoints; i++) {
     points.x.push(Math.random() * scale - scale / 2);
     points.y.push(Math.random() * scale - scale / 2);
     points.z.push(Math.random() * scale - scale / 2);
+    points.category.push(categories[i % categories.length]);
   }
   return points;
 }
