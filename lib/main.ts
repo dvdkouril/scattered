@@ -7,9 +7,7 @@ import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
 import { isBrewerPaletteName } from "./utils.ts";
 
-function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array, Float32Array];
-function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array];
-function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string) {
+function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array, Float32Array] {
   const table = tableFromIPC(b);
   console.log("loaded table: ");
   console.log(table.schema);

@@ -30,13 +30,6 @@ export function uploadDataToGPU(
   assert(yPositionsArray.length === numOfPoints, "number of y-coordinates should correspond to the number of x-coordinates.");
   assert(zPositionsArray.length === numOfPoints, "number of z-coordinates should correspond to the number of x-coordinates.");
 
-  // /* generating random colors */
-  // const colorsArr: number[] = [];
-  // for (let i = 0; i < numOfPoints; i++) {
-  //   const rgb = [Math.random(), Math.random(), Math.random(), 1.0];
-  //   colorsArr.push(...rgb);
-  // }
-
   /* x buffer */
   const xBuffer = uploadPositionBuffer(xPositionsArray.byteLength, xPositionsArray, "buffer for x positions");
   /* y buffer */
@@ -44,8 +37,6 @@ export function uploadDataToGPU(
   /* z buffer */
   const zBuffer = uploadPositionBuffer(zPositionsArray.byteLength, zPositionsArray, "buffer for z positions");
   /* colors buffer: TODO: kinda semantically not correct */
-  // const colorsTypedArray = new Float32Array(colorsArr);
-  // TODO: CAREFULLLLLLL! colorsArray only has 3 components!
   const colBuffer = uploadPositionBuffer(colorsArray.byteLength, colorsArray, "buffer for colors");
 
   return [xBuffer, yBuffer, zBuffer, colBuffer];
