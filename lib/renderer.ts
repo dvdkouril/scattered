@@ -13,7 +13,8 @@ export function uploadDataToGPU(
   device: GPUDevice,
   xPositionsArray: Float32Array,
   yPositionsArray: Float32Array,
-  zPositionsArray: Float32Array
+  zPositionsArray: Float32Array,
+  colorsArray: Float32Array,
 ): [GPUBuffer, GPUBuffer, GPUBuffer, GPUBuffer] {
   const uploadPositionBuffer = (bufferSize: number, dataValues: Float32Array, label: string = "position buffer") => {
     const dataBuffer = device.createBuffer({
@@ -29,13 +30,6 @@ export function uploadDataToGPU(
   assert(yPositionsArray.length === numOfPoints, "number of y-coordinates should correspond to the number of x-coordinates.");
   assert(zPositionsArray.length === numOfPoints, "number of z-coordinates should correspond to the number of x-coordinates.");
 
-  /* generating random colors */
-  const colorsArr: number[] = [];
-  for (let i = 0; i < numOfPoints; i++) {
-    const rgb = [Math.random(), Math.random(), Math.random(), 1.0];
-    colorsArr.push(...rgb);
-  }
-
   /* x buffer */
   const xBuffer = uploadPositionBuffer(xPositionsArray.byteLength, xPositionsArray, "buffer for x positions");
   /* y buffer */
@@ -43,8 +37,7 @@ export function uploadDataToGPU(
   /* z buffer */
   const zBuffer = uploadPositionBuffer(zPositionsArray.byteLength, zPositionsArray, "buffer for z positions");
   /* colors buffer: TODO: kinda semantically not correct */
-  const colorsTypedArray = new Float32Array(colorsArr);
-  const colBuffer = uploadPositionBuffer(colorsTypedArray.byteLength, colorsTypedArray, "buffer for colors");
+  const colBuffer = uploadPositionBuffer(colorsArray.byteLength, colorsArray, "buffer for colors");
 
   return [xBuffer, yBuffer, zBuffer, colBuffer];
 }
@@ -157,6 +150,7 @@ export async function initWebGPUStuff(
   xArray: Float32Array,
   yArray: Float32Array,
   zArray: Float32Array,
+  colorsArray: Float32Array,
   options?: DisplayOptions,
 ) {
   const adapter = await navigator.gpu?.requestAdapter();
@@ -185,6 +179,7 @@ export async function initWebGPUStuff(
     xArray,
     yArray,
     zArray,
+    colorsArray,
   );
 
   /* -------- buffer setup: uniforms (matrices) --------  */
