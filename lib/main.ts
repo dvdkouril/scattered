@@ -140,7 +140,7 @@ function mapQuantitativeValuesToColors(
 
   const colorsAsNumbers = colorValues.map((c) => {
     const rgb = c.gl(); // should be same as .rgb, but in 0..1 range
-    return [rgb[0], rgb[1], rgb[2]]; //~ making sure to _never_ keep the alpha channel (no matter the chroma API)
+    return [rgb[0], rgb[1], rgb[2], 1.0];
   }).flat();
   return Float32Array.from(colorsAsNumbers);
 }
