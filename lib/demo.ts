@@ -10,6 +10,7 @@ if (c && appEl) {
   appEl.appendChild(c);
 }
 
+//@ts-ignore
 function prepareLinearExample(): HTMLCanvasElement {
   const linCoords = generateLinearSequence(100);
   const linCoordsTable = tableFromArrays(linCoords);
@@ -39,6 +40,7 @@ function prepareRandomExample(): HTMLCanvasElement {
   return c;
 }
 
+//@ts-ignore
 function preparePenguinsExample(): HTMLCanvasElement {
   const penguinsURL = "https://raw.githubusercontent.com/dvdkouril/sample-3d-scatterplot-data/main/penguins.arrow";
   const c = sctrd.display(penguinsURL);
