@@ -1,6 +1,6 @@
 [project]
 name = "scattered"
-version = "0.0.0"
+version = "0.0.1"
 description = "3D scatterplots are useless, but fun"
 readme = "README.md"
 authors = [
@@ -21,9 +21,6 @@ dev = [
     "scikit-learn>=1.8.0",
     "umap-learn>=0.5.9.post2",
 ]
-
-[project.scripts]
-widget = "widget:main"
 
 [build-system]
 requires = ["hatchling"]
