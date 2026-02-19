@@ -51,6 +51,7 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         projection: mat4x4f,
         view: mat4x4f,
         eyePosition: vec4f,
+        positionsScale: f32,
       };
 
       //struct Settings {
@@ -85,12 +86,10 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         const scale = 0.1; //~ this is to scale the triangles themselves, not the positions
 
         var vsOut: VSOutput;
-        var positionsScale = 0.1; //~ scaling the positions (TODO: actually normalize)
-
         //~ constructing the world position from component buffers
-        var x = xPositions[instanceIndex] * positionsScale;
-        var y = yPositions[instanceIndex] * positionsScale;
-        var z = zPositions[instanceIndex] * positionsScale;
+        var x = xPositions[instanceIndex] * uni.positionsScale;
+        var y = yPositions[instanceIndex] * uni.positionsScale;
+        var z = zPositions[instanceIndex] * uni.positionsScale;
         var instPos = vec4f(x, y, z, 1.0);
 
         //~ impostors: align to alway face camera
@@ -151,6 +150,7 @@ export async function initWebGPUStuff(
   yArray: Float32Array,
   zArray: Float32Array,
   colorsArray: Float32Array,
+  positionsScale: number,
   options?: DisplayOptions,
 ) {
   const showError = (message: string) => {
@@ -200,7 +200,7 @@ export async function initWebGPUStuff(
   );
 
   /* -------- buffer setup: uniforms (matrices) --------  */
-  const uniformBufferSize = 4 * 16 * 2 + 4 * 4;
+  const uniformBufferSize = 4 * 16 * 2 + 4 * 4 + 4 * 4; // 2 matrices + eyePosition vec4 + positionsScale f32 (padded to 16)
   const uniformBuffer = device.createBuffer({
     label: 'uniforms',
     size: uniformBufferSize,
@@ -252,7 +252,7 @@ export async function initWebGPUStuff(
   let autoOrbiting = {
     angle: 0,
     speed: 0.01,
-    radius: 2,
+    radius: 3,
   };
   let camera = new Camera();
   let firstInteractionHappened = false;
@@ -300,10 +300,11 @@ export async function initWebGPUStuff(
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
 
     const numOfMatrices = 2;
-    const allUniformArrays = new Float32Array(numOfMatrices * 16 + 4);
+    const allUniformArrays = new Float32Array(numOfMatrices * 16 + 8); // +8 for eyePosition vec4 + positionsScale f32 (padded to 16)
     allUniformArrays.set(projectionMatAsF32A, 0);
     allUniformArrays.set(viewMatAsF32A, projectionMatAsF32A.length);
     allUniformArrays.set([cameraPosition[0], cameraPosition[1], cameraPosition[2], 1.0], projectionMatAsF32A.length + viewMatAsF32A.length);
+    allUniformArrays.set([positionsScale], projectionMatAsF32A.length + viewMatAsF32A.length + 4);
 
     device.queue.writeBuffer(uniformBuffer, 0, allUniformArrays);
 

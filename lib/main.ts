@@ -7,7 +7,21 @@ import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
 import { isBrewerPaletteName } from "./utils.ts";
 
-function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array, Float32Array] {
+function arrayMaxAbs(arr: Float32Array): number {
+  let max = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const abs = Math.abs(arr[i]);
+    if (abs > max) max = abs;
+  }
+  return max;
+}
+
+function computeScaleFactor(xArr: Float32Array, yArr: Float32Array, zArr: Float32Array): number {
+  const maxAbs = Math.max(arrayMaxAbs(xArr), arrayMaxAbs(yArr), arrayMaxAbs(zArr));
+  return maxAbs > 0 ? 1.0 / maxAbs : 1.0;
+}
+
+function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?: string, colorField?: string): [Float32Array, Float32Array, Float32Array, Float32Array, number] {
   const table = tableFromIPC(b);
   console.log("loaded table: ");
   console.log(table.schema);
@@ -22,6 +36,7 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   const xArr = new Float32Array(columns[xKey]);
   const yArr = new Float32Array(columns[yKey]);
   const zArr = new Float32Array(columns[zKey]);
+  const positionsScale = computeScaleFactor(xArr, yArr, zArr);
 
   /*
    * If the `colorField` is specified, this means that we want to grab that column and:
@@ -34,7 +49,7 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
     assert(colorColumn, `field ${colorField} not found in table (trying to map to color)`);
     const colorArr = Array.from(colorColumn.toArray());
     const colorsBuffer = mapValuesToColors(colorArr);
-    return [xArr, yArr, zArr, colorsBuffer];
+    return [xArr, yArr, zArr, colorsBuffer, positionsScale];
   }
 
   //~ if the colorField is not specified, build the buffer with a default color
@@ -46,7 +61,7 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
     defaultColors.set(col, i);
   }
 
-  return [xArr, yArr, zArr, defaultColors];
+  return [xArr, yArr, zArr, defaultColors, positionsScale];
 }
 
 /*
@@ -179,16 +194,16 @@ function display(
       if (d) {
         console.log(`loaded data of size: ${d.byteLength}`);
 
-        const points = processArrow(d, x, y, z, color);
-        initWebGPUStuff(cEl, ...points, options);
+        const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(d, x, y, z, color);
+        initWebGPUStuff(cEl, xArr, yArr, zArr, colorsArr, positionsScale, options);
       } else {
         console.log("failed fetching the data");
       }
     }).catch(_ => { console.log("failed fetching the data") });
   } else if (input instanceof ArrayBuffer) {
     console.log(`display::using Arrow bytes (${input.byteLength})`);
-    const points = processArrow(input, x, y, z, color);
-    initWebGPUStuff(cEl, ...points, options);
+    const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(input, x, y, z, color);
+    initWebGPUStuff(cEl, xArr, yArr, zArr, colorsArr, positionsScale, options);
   } else {
     console.warn("not implemented!");
   }
