@@ -41,16 +41,22 @@ class Widget(anywidget.AnyWidget):
 
     # Apache Arrow Table serialized as bytes
     input_table = traitlets.Bytes().tag(sync=True)
+    # Encoding (specifying which columns of the data map to what attributes)
+    encoding = traitlets.Dict().tag(sync=True)
     # Options for the visualization (e.g., background color)
     options = traitlets.Dict().tag(sync=True)
 
-    def __init__(self, input, options=None):
+    def __init__(self, input, encoding=None, options=None):
         """
         Entry point.
 
         Args:
             input: Input data which can be of the following types:
                 - str: A URL to read the data from.
+                - pd.DataFrame: A pandas DataFrame.
+                - bytes: Arrow IPC bytes.
+            encoding: (Optional) Dict mapping visual channels to column names,
+                e.g. {"color": "letter"}.
             options: (Optional) Additional options for widget configuration.
         """
         input_as_arrow_bytes = None
@@ -66,4 +72,4 @@ class Widget(anywidget.AnyWidget):
         else:
             raise ValueError("Unsupported input type. Supported types are: str (URL), pd.DataFrame, bytes (Arrow format).")
 
-        super().__init__(input_table=input_as_arrow_bytes)
+        super().__init__(input_table=input_as_arrow_bytes, encoding=encoding or {})
