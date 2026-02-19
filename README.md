@@ -12,12 +12,46 @@ The basic idea is:
 - webgpu rendering
 - javascript library (npm), jupyter widget (pypi), web page (like [quak](https://github.com/manzt/quak))
 
-## usage
+## install
+In a Python project:
+```sh
+uv add scattered
+```
+
+In a Javascript project:
+```sh
+pnpm add scattered # or `npm install scattered`
+```
+
+## usage in python
+
+```python
+import scattered
+import numpy as np
+import pandas as pd
+
+df = pd.DataFrame({
+    "x": np.random.rand(5),
+    "y": np.random.rand(5),
+    "z": np.random.rand(5),
+})
+
+scattered.Widget(df)
+```
+
+## usage in javascript
 
 ```typescript
 import * as sctrd from "scattered";
 
-const c = sctrd.display("https://raw.githubusercontent.com/dvdkouril/sample-3d-scatterplot-data/main/penguins.arrow");
+const url = "https://raw.githubusercontent.com/dvdkouril/sample-3d-scatterplot-data/main/penguins.arrow";
+const c = sctrd.display(url,
+    { // encoding
+        x: "x",
+        y: "y",
+        z: "z",
+        color: "category",
+    });
 
 let appEl = document.querySelector('#app');
 if (c) {
