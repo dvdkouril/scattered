@@ -334,9 +334,10 @@ export async function initWebGPUStuff(
 
   function onPointerDown(event: PointerEvent) {
     if (!firstInteractionHappened) {
-      camera = new Camera(autoOrbiting.angle, autoOrbiting.radius);
+      camera = new Camera(autoOrbiting.angle, autoOrbiting.radius, Math.PI / 2);
       firstInteractionHappened = true;
     }
+    canvas.setPointerCapture(event.pointerId);
     camera.onPointerDown(event);
   }
 
@@ -350,7 +351,7 @@ export async function initWebGPUStuff(
 
   function onWheel(event: WheelEvent) {
     if (!firstInteractionHappened) {
-      camera = new Camera(autoOrbiting.angle, autoOrbiting.radius);
+      camera = new Camera(autoOrbiting.angle, autoOrbiting.radius, Math.PI / 2);
       firstInteractionHappened = true;
     }
     event.preventDefault();
