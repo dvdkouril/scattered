@@ -12,19 +12,15 @@ The basic idea is:
 - webgpu rendering
 - javascript library (npm), jupyter widget (pypi), web page (like [quak](https://github.com/manzt/quak))
 
-## install
-In a Python project:
+## use in python
+
+Install:
 ```sh
 uv add scattered
 ```
+or: `pip install scattered`
 
-In a Javascript project:
-```sh
-pnpm add scattered # or `npm install scattered`
-```
-
-## usage in python
-
+Then use:
 ```python
 import scattered
 import numpy as np
@@ -39,8 +35,14 @@ df = pd.DataFrame({
 scattered.Widget(df)
 ```
 
-## usage in javascript
+## use in javascript
+Install:
+```sh
+pnpm add scattered
+```
+or: `npm install scattered` or `yarn add scattered`
 
+Then use:
 ```typescript
 import * as sctrd from "scattered";
 
