@@ -170,14 +170,14 @@ function mapQuantitativeValuesToColors(
   * @param color - (optional) Name of the field in the Arrow file for the color values.
   */
 function display(
-  input: string | Array<Array<number>> | ArrayBuffer,
+  input: string | ArrayBuffer,
   encoding?: Encoding,
   options?: DisplayOptions,
 ): DisplayResult {
   const canvas = document.createElement("canvas");
   canvas.style.width = "100%";
 
-  let destroy = () => {};
+  let destroy = () => { };
 
   //~ defaults
   const {
@@ -214,7 +214,7 @@ function display(
       if (cleanup) destroy = cleanup;
     });
   } else {
-    console.warn("not implemented!");
+    console.error("Input to `display` must be an URL string or an ArrayBuffer!");
   }
 
   return { canvas, destroy };
