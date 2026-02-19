@@ -8,3 +8,8 @@ export type Encoding = {
 export type DisplayOptions = {
 	backgroundColor?: string;
 };
+
+export type DisplayResult = {
+	canvas: HTMLCanvasElement;
+	destroy: () => void;
+};

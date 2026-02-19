@@ -152,7 +152,7 @@ export async function initWebGPUStuff(
   colorsArray: Float32Array,
   positionsScale: number,
   options?: DisplayOptions,
-) {
+): Promise<(() => void) | undefined> {
   const showError = (message: string) => {
     const dpr = window.devicePixelRatio || 1;
     const displayWidth = canvas.clientWidth || 300;
@@ -256,11 +256,10 @@ export async function initWebGPUStuff(
   };
   let camera = new Camera();
   let firstInteractionHappened = false;
+  let animFrameId: number;
 
   function render() {
-    //console.log("render()");
-    //let requestId = requestAnimationFrame(render);
-    requestAnimationFrame(render);
+    animFrameId = requestAnimationFrame(render);
 
     assert(device, "device should not be null or undefined at this point!");
     assert(context, "context should not be null or undefined at this point!");
@@ -379,4 +378,14 @@ export async function initWebGPUStuff(
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("wheel", onWheel);
   canvas.style.touchAction = 'none'; //~ disable page scroll
+
+  return () => {
+    cancelAnimationFrame(animFrameId);
+    observer.disconnect();
+    canvas.removeEventListener("mousemove", onMouseMove);
+    canvas.removeEventListener("pointerdown", onPointerDown);
+    canvas.removeEventListener("pointerup", onPointerUp);
+    canvas.removeEventListener("wheel", onWheel);
+    device.destroy();
+  };
 }

@@ -20,7 +20,7 @@ function prepareLinearExample(): HTMLCanvasElement {
   const tableIPC = tableToIPC(linCoordsTable, {});
   assert(tableIPC, "gotta be able to make an IPC from the table");
 
-  const c = sctrd.display(tableIPC.buffer, {}, { backgroundColor: "#000000" });
+  const { canvas: c } = sctrd.display(tableIPC.buffer, {}, { backgroundColor: "#000000" });
   return c;
 }
 
@@ -36,14 +36,14 @@ function prepareRandomExample(): HTMLCanvasElement {
 
   // const c = sctrd.display(tableIPC.buffer, { backgroundColor: "#e6e6fa" });
   // const c = sctrd.display(tableIPC.buffer);
-  const c = sctrd.display(tableIPC.buffer, { color: "category" });
+  const { canvas: c } = sctrd.display(tableIPC.buffer, { color: "category" });
   return c;
 }
 
 //@ts-ignore
 function preparePenguinsExample(): HTMLCanvasElement {
   const penguinsURL = "https://raw.githubusercontent.com/dvdkouril/sample-3d-scatterplot-data/main/penguins.arrow";
-  const c = sctrd.display(penguinsURL);
+  const { canvas: c } = sctrd.display(penguinsURL);
   return c;
 }
 

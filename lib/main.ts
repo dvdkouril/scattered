@@ -1,7 +1,7 @@
 import { loadDataFromURL } from "./loaders.ts";
 import { initWebGPUStuff } from "./renderer.ts";
 import { tableFromIPC } from "@uwdata/flechette";
-import { DisplayOptions, Encoding } from "./types.ts";
+import { DisplayOptions, DisplayResult, Encoding } from "./types.ts";
 import { assert } from "./assert.ts";
 import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
@@ -173,9 +173,11 @@ function display(
   input: string | Array<Array<number>> | ArrayBuffer,
   encoding?: Encoding,
   options?: DisplayOptions,
-): HTMLCanvasElement {
-  const cEl = document.createElement("canvas");
-  cEl.style.width = "100%";
+): DisplayResult {
+  const canvas = document.createElement("canvas");
+  canvas.style.width = "100%";
+
+  let destroy = () => {};
 
   //~ defaults
   const {
@@ -195,7 +197,9 @@ function display(
         console.log(`loaded data of size: ${d.byteLength}`);
 
         const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(d, x, y, z, color);
-        initWebGPUStuff(cEl, xArr, yArr, zArr, colorsArr, positionsScale, options);
+        initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(cleanup => {
+          if (cleanup) destroy = cleanup;
+        });
       } else {
         console.log("failed fetching the data");
       }
@@ -203,12 +207,14 @@ function display(
   } else if (input instanceof ArrayBuffer) {
     console.log(`display::using Arrow bytes (${input.byteLength})`);
     const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(input, x, y, z, color);
-    initWebGPUStuff(cEl, xArr, yArr, zArr, colorsArr, positionsScale, options);
+    initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(cleanup => {
+      if (cleanup) destroy = cleanup;
+    });
   } else {
     console.warn("not implemented!");
   }
 
-  return cEl;
+  return { canvas, destroy };
 }
 
 export { display };
