@@ -52,7 +52,10 @@ export class Camera {
   }
 
   onWheel(event: WheelEvent) {
-    this.#radius += event.deltaY * 0.01;
+    let delta = event.deltaY;
+    if (event.deltaMode === 1) delta *= 16;  // lines → pixels
+    if (event.deltaMode === 2) delta *= 800; // pages → pixels
+    this.#radius += delta * 0.01;
     this.#radius = Math.max(0.1, this.#radius);
   }
 
