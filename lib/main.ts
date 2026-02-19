@@ -146,7 +146,12 @@ function mapQuantitativeValuesToColors(
   }
 
   if (values instanceof BigInt64Array) {
-    colorValues = Array.from(values, (v) => scaledScale(Number(v))); //~ is it sketchy to convert bigint to number?
+    const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+    const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER);
+    if (values.some(v => v > MAX_SAFE || v < MIN_SAFE)) {
+      console.warn("Color field contains BigInt values outside the safe integer range; color mapping may lose precision.");
+    }
+    colorValues = Array.from(values, (v) => scaledScale(Number(v)));
   }
 
   if (Array.isArray(values) && values.every((d) => typeof d === "number")) {
