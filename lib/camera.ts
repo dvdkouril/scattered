@@ -6,21 +6,25 @@ export class Camera {
   #dragStartPos: vec2 = vec2.fromValues(0, 0);
   #dragging: boolean = false;
 
-  #angle = 0;
+  #theta = 0;        // azimuth angle (horizontal)
+  #phi = Math.PI / 2; // polar angle (vertical), PI/2 = equator
   #radius = 2;
   #speed = 0.01;
 
-  constructor(angle: number = 0, radius: number = 2) {
-    this.#dragStartPos = vec2.fromValues(0, 0);
-    this.#angle = angle;
+  static readonly PHI_MIN = 0.01;
+  static readonly PHI_MAX = Math.PI - 0.01;
+
+  constructor(theta: number = 0, radius: number = 2, phi: number = Math.PI / 2) {
+    this.#theta = theta;
+    this.#phi = phi;
     this.#radius = radius;
   }
 
   getPosition(): vec3 {
-    const camX = Math.cos(this.#angle) * this.#radius;
-    const camZ = Math.sin(this.#angle) * this.#radius;
-    const cameraPosition = vec3.fromValues(camX, 0, camZ);
-    return cameraPosition;
+    const x = this.#radius * Math.cos(this.#theta) * Math.sin(this.#phi);
+    const y = this.#radius * Math.cos(this.#phi);
+    const z = this.#radius * Math.sin(this.#theta) * Math.sin(this.#phi);
+    return vec3.fromValues(x, y, z);
   }
 
   onPointerDown(event: PointerEvent) {
@@ -33,20 +37,25 @@ export class Camera {
   }
 
   onMouseMove(event: MouseEvent) {
-    // console.log(`${event.clientX}, ${event.clientY}`);
     if (!this.#dragging) {
       return;
     }
 
     const endPos = vec2.fromValues(event.clientX, event.clientY);
-    const delta = vec2.fromValues(0, 0);
-    vec2.sub(delta, endPos, this.#dragStartPos);
-    this.#angle += delta[0] * this.#speed * Math.PI / 12;
+    const delta = vec2.sub(vec2.create(), endPos, this.#dragStartPos);
+
+    this.#theta += delta[0] * this.#speed * Math.PI / 12;
+    this.#phi  -= delta[1] * this.#speed * Math.PI / 12;
+    this.#phi   = Math.max(Camera.PHI_MIN, Math.min(Camera.PHI_MAX, this.#phi));
 
     this.#dragStartPos = vec2.fromValues(event.clientX, event.clientY);
   }
 
   onWheel(event: WheelEvent) {
     this.#radius += event.deltaY * 0.01;
+    this.#radius = Math.max(0.1, this.#radius);
   }
+
+  get theta() { return this.#theta; }
+  get phi()   { return this.#phi; }
 };
