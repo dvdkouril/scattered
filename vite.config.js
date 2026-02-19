@@ -16,5 +16,8 @@ export default defineConfig({
 	},
 	server: {
 		cors: true,
-	}
+	},
+	test: {
+		environment: 'happy-dom',
+	},
 });
