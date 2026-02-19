@@ -1,5 +1,8 @@
 import { vec2, vec3 } from "gl-matrix";
 
+const PHI_MIN = 0.01;
+const PHI_MAX = Math.PI - 0.01;
+
 /* Loosely inspired by https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/OrbitControls.js
  * ...but worse. */
 export class Camera {
@@ -10,9 +13,6 @@ export class Camera {
   #phi = Math.PI / 2; // polar angle (vertical), PI/2 = equator
   #radius = 2;
   #speed = 0.01;
-
-  static readonly PHI_MIN = 0.01;
-  static readonly PHI_MAX = Math.PI - 0.01;
 
   constructor(theta: number = 0, radius: number = 2, phi: number = Math.PI / 2) {
     this.#theta = theta;
@@ -46,7 +46,7 @@ export class Camera {
 
     this.#theta += delta[0] * this.#speed * Math.PI / 12;
     this.#phi  -= delta[1] * this.#speed * Math.PI / 12;
-    this.#phi   = Math.max(Camera.PHI_MIN, Math.min(Camera.PHI_MAX, this.#phi));
+    this.#phi   = Math.max(PHI_MIN, Math.min(PHI_MAX, this.#phi));
 
     this.#dragStartPos = vec2.fromValues(event.clientX, event.clientY);
   }
