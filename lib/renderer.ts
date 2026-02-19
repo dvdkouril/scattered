@@ -337,6 +337,7 @@ export async function initWebGPUStuff(
       camera = new Camera(autoOrbiting.angle, autoOrbiting.radius, Math.PI / 2);
       firstInteractionHappened = true;
     }
+    canvas.setPointerCapture(event.pointerId);
     camera.onPointerDown(event);
   }
 
