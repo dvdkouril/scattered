@@ -1,6 +1,23 @@
 import chroma from "chroma-js";
 import { vec3, mat4 } from "gl-matrix";
 
+export function showCanvasError(canvas: HTMLCanvasElement, message: string) {
+  const dpr = window.devicePixelRatio || 1;
+  const displayWidth = canvas.clientWidth || 300;
+  const displayHeight = canvas.clientHeight || 150;
+  canvas.width = displayWidth * dpr;
+  canvas.height = displayHeight * dpr;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
+    ctx.fillStyle = '#ccc';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(message, 16, 32);
+  }
+}
+
 export function prepareCameraMatrix(width: number, height: number): mat4 {
 
   const projMat = mat4.create();

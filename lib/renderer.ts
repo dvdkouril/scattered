@@ -1,4 +1,4 @@
-import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, pickRandomBackgroundColor } from "./utils";
+import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, pickRandomBackgroundColor, showCanvasError } from "./utils";
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
@@ -153,27 +153,10 @@ export async function initWebGPUStuff(
   positionsScale: number,
   options?: DisplayOptions,
 ): Promise<(() => void) | undefined> {
-  const showError = (message: string) => {
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = canvas.clientWidth || 300;
-    const displayHeight = canvas.clientHeight || 150;
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.scale(dpr, dpr);
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(0, 0, displayWidth, displayHeight);
-      ctx.fillStyle = '#ccc';
-      ctx.font = '14px sans-serif';
-      ctx.fillText(message, 16, 32);
-    }
-  };
-
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
   if (!device) {
-    showError('`scattered` requires the WebGPU API, which is not supported in this browser.');
+    showCanvasError(canvas, '`scattered` requires the WebGPU API, which is not supported in this browser.');
     return;
   }
 
@@ -181,7 +164,7 @@ export async function initWebGPUStuff(
   const context = canvas.getContext('webgpu');
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
   if (!context) {
-    showError('Failed to get a WebGPU context.');
+    showCanvasError(canvas, 'Failed to get a WebGPU context.');
     return;
   }
   context.configure({

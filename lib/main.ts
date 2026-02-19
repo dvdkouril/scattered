@@ -5,7 +5,7 @@ import { DisplayOptions, DisplayResult, Encoding } from "./types.ts";
 import { assert } from "./assert.ts";
 import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
-import { isBrewerPaletteName } from "./utils.ts";
+import { isBrewerPaletteName, showCanvasError } from "./utils.ts";
 
 function arrayMaxAbs(arr: Float32Array): number {
   let max = 0;
@@ -201,9 +201,12 @@ function display(
           if (cleanup) destroy = cleanup;
         });
       } else {
-        console.log("failed fetching the data");
+        showCanvasError(canvas, `Failed to fetch data from: ${url}`);
       }
-    }).catch(_ => { console.log("failed fetching the data") });
+    }).catch((e: unknown) => {
+      showCanvasError(canvas, `Failed to fetch data from: ${url}`);
+      console.error(e);
+    });
   } else if (input instanceof ArrayBuffer) {
     console.log(`display::using Arrow bytes (${input.byteLength})`);
     const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(input, x, y, z, color);
