@@ -252,7 +252,7 @@ export async function initWebGPUStuff(
   let autoOrbiting = {
     angle: 0,
     speed: 0.01,
-    radius: 2,
+    radius: 3,
   };
   let camera = new Camera();
   let firstInteractionHappened = false;
