@@ -27,10 +27,20 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   console.log(table.schema);
 
   const columns = table.toColumns();
+  const availableFields = table.schema.fields.map((f: { name: string }) => f.name);
+
   //~ By default, look for "x", "y", "z" fields, but use other fields if specified
   const xKey = xField ? xField : "x";
   const yKey = yField ? yField : "y";
   const zKey = zField ? zField : "z";
+
+  const requiredFields = [xKey, yKey, zKey, ...(colorField ? [colorField] : [])];
+  for (const field of requiredFields) {
+    if (!availableFields.includes(field)) {
+      throw new Error(`Field "${field}" not found in Arrow table. Available fields: ${availableFields.join(", ")}`);
+    }
+  }
+
   // Convert to Float32Array since shader expects f32, not f64
   // flechette outputs Float type column to `number[]` which is 64-bit float
   const xArr = new Float32Array(columns[xKey]);
@@ -46,8 +56,7 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
    */
   if (colorField) {
     const colorColumn = table.getChild(colorField);
-    assert(colorColumn, `field ${colorField} not found in table (trying to map to color)`);
-    const colorArr = Array.from(colorColumn.toArray());
+    const colorArr = Array.from(colorColumn!.toArray());
     const colorsBuffer = mapValuesToColors(colorArr);
     return [xArr, yArr, zArr, colorsBuffer, positionsScale];
   }
