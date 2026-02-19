@@ -234,4 +234,4 @@ function display(
   return { canvas, destroy };
 }
 
-export { display };
+export { display, mapValuesToColors };
