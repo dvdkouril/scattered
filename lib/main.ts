@@ -99,10 +99,10 @@ function mapQualitativeValuesToColors(values: string[], colorScale: string | str
   if (typeof colorScale === "string") {
     colors = chroma.scale(colorScale).colors(numUniqueValues);
   } else {
-    colors = colorScale; //~ In this case we assume that the user provided enough colors in the array
+    colors = colorScale;
   }
   for (const [i, v] of [...uniqueValues].entries()) {
-    const newColor = colors[i];
+    const newColor = colors[i % colors.length];
     if (!mapColorsValues.has(v)) {
       mapColorsValues.set(v, chroma(newColor));
     }
