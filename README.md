@@ -4,7 +4,7 @@
 
 > [!CAUTION]
 > This project is as Work-In-Progress as it gets.
-<img width="2000" height="288" alt="teaser" src="https://raw.githubusercontent.com/dvdkouril/scattered/main/teaser.png" />
+<img width="2000" height="288" alt="teaser" src="./teaser.png" />
 
 The basic idea is:
 - arrow/dataframe as input (with 'x', 'y', 'z' columns)
