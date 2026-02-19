@@ -1,4 +1,5 @@
 import pathlib
+from urllib.parse import urlparse
 import anywidget
 import traitlets
 import pandas as pd
@@ -54,7 +55,9 @@ class Widget(anywidget.AnyWidget):
         """
         input_as_arrow_bytes = None
         if isinstance(input, str):
-            # TODO: check if input is a valid URL
+            parsed = urlparse(input)
+            if parsed.scheme not in ("http", "https") or not parsed.netloc:
+                raise ValueError(f"Invalid URL: {input!r}. Must be a valid http or https URL.")
             input_as_arrow_bytes = _fetch_remote_table(input)
         elif isinstance(input, pd.DataFrame):
             input_as_arrow_bytes = _dataframe_to_arrow_bytes(input)
