@@ -73,13 +73,27 @@ function processArrow(b: ArrayBuffer, xField?: string, yField?: string, zField?:
   return [xArr, yArr, zArr, defaultColors, positionsScale];
 }
 
+//~ I like the "default" colors from Observable
+const observable10Colors = {
+  blue: "#4269d0",
+  orange: "#efb118",
+  red: "#ff725c",
+  cyan: "#6cc5b0",
+  green: "#3ca951",
+  pink: "#ff8ab7",
+  purple: "#a463f2",
+  lightBlue: "#97bbf5",
+  brown: "#9c6b4e",
+  gray: "#9498a0",
+};
+
 /*
  * Returns colors corresponding to the input values. The Float32Array returned contains RGB values in sequence.
  * Not storing the alpha channel mainly because it's always the same and we should be able to fill that in the shader.
  */
 function mapValuesToColors(
   values: string[] | number[] | Float64Array | BigInt64Array,
-  colorScale: string | string[] = "viridis"
+  colorScale: string | string[] = Object.values(observable10Colors),
 ): Float32Array {
 
   if (Array.isArray(values) && values.every((d) => typeof d === "string")) {
