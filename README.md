@@ -68,8 +68,7 @@ This project is developed by David Kouřil ([web](https://www.davidkouril.com),
 
 ### why
 I think we're missing a modern, simple to use library for interactive 3D
-scatterplots. Visualization libraries are typically centered around 2D plots,
-which makes it to export as vector graphics.
+scatterplots. Visualization libraries are typically centered around 2D plots to make exporting as vector graphics easier.
 
 However, learning is the primary motivation:
 1. learn a bit of webgpu
