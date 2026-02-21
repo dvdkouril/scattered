@@ -50,7 +50,7 @@
         opacity: 0.8;
       }
 
-      #reset-btn {
+      #reset-btn, #screenshot-btn {
         display: none;
         background: none;
         border: 1px solid rgba(255,255,255,0.5);
@@ -64,7 +64,7 @@
         vertical-align: middle;
       }
 
-      #reset-btn:hover {
+      #reset-btn:hover, #screenshot-btn:hover {
         background: rgba(255,255,255,0.2);
       }
 
@@ -188,7 +188,7 @@
   </head>
   <body>
     <div id="top-bar">
-      <span>scattered <span id="dataset-name"></span> <button id="reset-btn">&#x2715;</button></span>
+      <span>scattered <span id="dataset-name"></span> <button id="reset-btn">&#x2715;</button> <button id="screenshot-btn">&#x1F4F7; Screenshot (2000&#xD7;2000)</button></span>
       <div id="columns"></div>
       <div id="encodings"></div>
       <a href="https://github.com/dvdkouril/scattered" target="_blank" aria-label="GitHub repository">
@@ -226,9 +226,18 @@
       const vizEl = document.getElementById("viz");
       const errorEl = document.getElementById("error");
 
+      const screenshotBtn = document.getElementById("screenshot-btn");
+
       let currentDestroy = null;
+      let currentScreenshot = null;
       let currentEncoding = { x: "x", y: "y", z: "z" };
       let currentBuffer = null;
+
+      screenshotBtn.addEventListener("click", () => {
+        if (currentScreenshot) {
+          currentScreenshot({ width: 2000, height: 2000 });
+        }
+      });
 
       function renderColumns(columnNames) {
         columnsEl.innerHTML = "";
@@ -280,8 +289,9 @@
           currentDestroy = null;
         }
         vizEl.innerHTML = "";
-        const { canvas, destroy } = sctrd.display(currentBuffer, currentEncoding);
+        const { canvas, destroy, screenshot } = sctrd.display(currentBuffer, currentEncoding);
         currentDestroy = destroy;
+        currentScreenshot = screenshot;
         vizEl.appendChild(canvas);
       }
 
@@ -318,6 +328,8 @@
         vizEl.style.display = "none";
         datasetNameEl.textContent = "";
         resetBtn.style.display = "none";
+        screenshotBtn.style.display = "none";
+        currentScreenshot = null;
         columnsEl.innerHTML = "";
         columnsEl.style.display = "none";
         encodingsEl.innerHTML = "";
@@ -369,8 +381,10 @@
           datasetNameEl.textContent = "/ " + file.name;
           resetBtn.style.display = "inline";
           contentEl.style.display = "none";
-          const { canvas, destroy } = sctrd.display(buffer, currentEncoding);
+          const { canvas, destroy, screenshot } = sctrd.display(buffer, currentEncoding);
           currentDestroy = destroy;
+          currentScreenshot = screenshot;
+          screenshotBtn.style.display = "inline";
           vizEl.style.display = "flex";
           vizEl.appendChild(canvas);
         } catch (e) {
