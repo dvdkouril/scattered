@@ -1,8 +1,8 @@
-import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, pickRandomBackgroundColor, showCanvasError } from "./utils";
+import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, showCanvasError } from "./utils";
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
-import { DisplayOptions } from "./types.ts";
+import { DisplayOptions, ScreenshotOptions } from "./types.ts";
 
 /**
  * Uploads the positional coordinate arrays to GPU buffers. 
@@ -152,7 +152,7 @@ export async function initWebGPUStuff(
   colorsArray: Float32Array,
   positionsScale: number,
   options?: DisplayOptions,
-): Promise<(() => void) | undefined> {
+): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
   if (!device) {
@@ -210,7 +210,7 @@ export async function initWebGPUStuff(
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
-  const bgColor = options?.backgroundColor ? options.backgroundColor : pickRandomBackgroundColor("light");
+  const bgColor = options?.backgroundColor ?? "#ffffff";
   const bgColorArr = hexColorToFloatArray(bgColor);
 
   const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -363,13 +363,122 @@ export async function initWebGPUStuff(
   canvas.addEventListener("wheel", onWheel);
   canvas.style.touchAction = 'none'; //~ disable page scroll
 
-  return () => {
-    cancelAnimationFrame(animFrameId);
-    observer.disconnect();
-    canvas.removeEventListener("mousemove", onMouseMove);
-    canvas.removeEventListener("pointerdown", onPointerDown);
-    canvas.removeEventListener("pointerup", onPointerUp);
-    canvas.removeEventListener("wheel", onWheel);
-    device.destroy();
+  async function screenshot(options?: ScreenshotOptions): Promise<void> {
+    assert(device, "device should not be null or undefined at this point!");
+
+    const filename = options?.filename ?? "screenshot.png";
+
+    // If width/height not specified, scale up the canvas to ~4K preserving aspect ratio
+    let w: number;
+    let h: number;
+    if (options?.width || options?.height) {
+      w = options?.width ?? canvas.width;
+      h = options?.height ?? canvas.height;
+    } else {
+      const targetLongEdge = 4096;
+      const scale = targetLongEdge / Math.max(canvas.width, canvas.height);
+      w = Math.round(canvas.width * scale);
+      h = Math.round(canvas.height * scale);
+    }
+
+    // 1. Create an offscreen canvas at the target resolution
+    const offscreen = new OffscreenCanvas(w, h);
+    const offCtx = offscreen.getContext("webgpu");
+    if (!offCtx) {
+      throw new Error("Failed to get WebGPU context on OffscreenCanvas");
+    }
+    offCtx.configure({
+      device,
+      format: presentationFormat,
+    });
+
+    // 2. Create a depth texture at the target resolution
+    const offDepthTexture = device.createTexture({
+      size: [w, h],
+      format: "depth24plus",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    // 3. Build a render pass descriptor
+    const offRenderPassDescriptor: GPURenderPassDescriptor = {
+      label: "screenshot offscreen renderPass",
+      colorAttachments: [
+        {
+          view: offCtx.getCurrentTexture().createView(),
+          clearValue: [...bgColorArr, 1],
+          loadOp: "clear" as const,
+          storeOp: "store" as const,
+        },
+      ],
+      depthStencilAttachment: {
+        view: offDepthTexture.createView(),
+        depthClearValue: 1.0,
+        depthLoadOp: "clear" as const,
+        depthStoreOp: "store" as const,
+      },
+    };
+
+    // 4. Compute camera position (respecting current orbit/interaction state)
+    let cameraPosition: vec3;
+    if (!firstInteractionHappened) {
+      const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
+      const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
+      cameraPosition = vec3.fromValues(camX, 0, camZ);
+    } else {
+      cameraPosition = camera.getPosition();
+    }
+
+    // 5. Compute matrices using offscreen dimensions for correct aspect ratio
+    const projectionMatrix = prepareCameraMatrix(w, h);
+    const viewMatrix = prepareViewMatrix(cameraPosition);
+
+    const projectionMatAsF32A = projectionMatrix as Float32Array;
+    const viewMatAsF32A = viewMatrix as Float32Array;
+
+    const numOfMatrices = 2;
+    const allUniformArrays = new Float32Array(numOfMatrices * 16 + 8);
+    allUniformArrays.set(projectionMatAsF32A, 0);
+    allUniformArrays.set(viewMatAsF32A, projectionMatAsF32A.length);
+    allUniformArrays.set([cameraPosition[0], cameraPosition[1], cameraPosition[2], 1.0], projectionMatAsF32A.length + viewMatAsF32A.length);
+    allUniformArrays.set([positionsScale], projectionMatAsF32A.length + viewMatAsF32A.length + 4);
+
+    // 6. Write uniforms, encode render pass, submit
+    device.queue.writeBuffer(uniformBuffer, 0, allUniformArrays);
+
+    const encoder = device.createCommandEncoder({ label: "screenshot encoder" });
+    const pass = encoder.beginRenderPass(offRenderPassDescriptor);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.draw(3, xArray.length);
+    pass.end();
+    device.queue.submit([encoder.finish()]);
+
+    // 7. Wait for GPU work to complete
+    await device.queue.onSubmittedWorkDone();
+
+    // 8. Capture the offscreen canvas as a blob and trigger download
+    const blob = await offscreen.convertToBlob({ type: "image/png" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    // 9. Clean up
+    URL.revokeObjectURL(url);
+    offDepthTexture.destroy();
+  }
+
+  return {
+    destroy: () => {
+      cancelAnimationFrame(animFrameId);
+      observer.disconnect();
+      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("wheel", onWheel);
+      device.destroy();
+    },
+    screenshot,
   };
 }

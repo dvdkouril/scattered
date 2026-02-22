@@ -206,6 +206,7 @@ function display(
   canvas.style.width = "100%";
 
   let destroy = () => { };
+  let screenshotFn: (options?: import("./types.ts").ScreenshotOptions) => Promise<void> = () => Promise.resolve();
 
   //~ defaults
   const {
@@ -225,8 +226,11 @@ function display(
         console.log(`loaded data of size: ${d.byteLength}`);
 
         const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(d, x, y, z, color);
-        initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(cleanup => {
-          if (cleanup) destroy = cleanup;
+        initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(result => {
+          if (result) {
+            destroy = result.destroy;
+            screenshotFn = result.screenshot;
+          }
         });
       } else {
         showCanvasError(canvas, `Failed to fetch data from: ${url}`);
@@ -238,14 +242,17 @@ function display(
   } else if (input instanceof ArrayBuffer) {
     console.log(`display::using Arrow bytes (${input.byteLength})`);
     const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(input, x, y, z, color);
-    initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(cleanup => {
-      if (cleanup) destroy = cleanup;
+    initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(result => {
+      if (result) {
+        destroy = result.destroy;
+        screenshotFn = result.screenshot;
+      }
     });
   } else {
     console.error("Input to `display` must be an URL string or an ArrayBuffer!");
   }
 
-  return { canvas, destroy };
+  return { canvas, destroy, screenshot: (options?: import("./types.ts").ScreenshotOptions) => screenshotFn(options) };
 }
 
 export { display, mapValuesToColors };
