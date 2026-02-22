@@ -2,6 +2,7 @@ import pathlib
 from urllib.parse import urlparse
 import anywidget
 import traitlets
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import requests
@@ -54,6 +55,7 @@ class Widget(anywidget.AnyWidget):
             input: Input data which can be of the following types:
                 - str: A URL to read the data from.
                 - pd.DataFrame: A pandas DataFrame.
+                - np.ndarray: A 2D array of shape (N, 3) with x, y, z coordinates.
                 - bytes: Arrow IPC bytes.
             encoding: (Optional) Dict mapping visual channels to column names,
                 e.g. {"color": "letter"}.
@@ -67,9 +69,14 @@ class Widget(anywidget.AnyWidget):
             input_as_arrow_bytes = _fetch_remote_table(input)
         elif isinstance(input, pd.DataFrame):
             input_as_arrow_bytes = _dataframe_to_arrow_bytes(input)
+        elif isinstance(input, np.ndarray):
+            if input.ndim != 2 or input.shape[1] != 3:
+                raise ValueError(f"Expected a 2D numpy array with 3 columns (x, y, z), got shape {input.shape}.")
+            df = pd.DataFrame(input, columns=["x", "y", "z"])
+            input_as_arrow_bytes = _dataframe_to_arrow_bytes(df)
         elif isinstance(input, bytes):
             input_as_arrow_bytes = input # expecting that bytes are already in Arrow format
         else:
-            raise ValueError("Unsupported input type. Supported types are: str (URL), pd.DataFrame, bytes (Arrow format).")
+            raise ValueError("Unsupported input type. Supported types are: str (URL), pd.DataFrame, np.ndarray, bytes (Arrow format).")
 
         super().__init__(input_table=input_as_arrow_bytes, encoding=encoding or {})
