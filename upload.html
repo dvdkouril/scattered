@@ -188,7 +188,7 @@
   </head>
   <body>
     <div id="top-bar">
-      <span>scattered <span id="dataset-name"></span> <button id="reset-btn">&#x2715;</button> <button id="screenshot-btn">&#x1F4F7; Screenshot (2000&#xD7;2000)</button></span>
+      <span>scattered <span id="dataset-name"></span> <button id="reset-btn">&#x2715;</button> <button id="screenshot-btn">&#x1F4F7; Screenshot</button></span>
       <div id="columns"></div>
       <div id="encodings"></div>
       <a href="https://github.com/dvdkouril/scattered" target="_blank" aria-label="GitHub repository">
@@ -235,7 +235,7 @@
 
       screenshotBtn.addEventListener("click", () => {
         if (currentScreenshot) {
-          currentScreenshot({ width: 2000, height: 2000 });
+          currentScreenshot();
         }
       });
 

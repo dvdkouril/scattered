@@ -367,8 +367,19 @@ export async function initWebGPUStuff(
     assert(device, "device should not be null or undefined at this point!");
 
     const filename = options?.filename ?? "screenshot.png";
-    const w = options?.width ?? canvas.width;
-    const h = options?.height ?? canvas.height;
+
+    // If width/height not specified, scale up the canvas to ~4K preserving aspect ratio
+    let w: number;
+    let h: number;
+    if (options?.width || options?.height) {
+      w = options?.width ?? canvas.width;
+      h = options?.height ?? canvas.height;
+    } else {
+      const targetLongEdge = 4096;
+      const scale = targetLongEdge / Math.max(canvas.width, canvas.height);
+      w = Math.round(canvas.width * scale);
+      h = Math.round(canvas.height * scale);
+    }
 
     // 1. Create an offscreen canvas at the target resolution
     const offscreen = new OffscreenCanvas(w, h);
