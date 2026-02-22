@@ -35,6 +35,32 @@
         justify-content: space-between;
       }
 
+      #mapping-panel {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: fixed;
+        top: 3rem;
+        left: 1rem;
+        z-index: 100;
+        background: rgba(30, 30, 30, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: #fff;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        min-width: 140px;
+      }
+
+      #mapping-panel .panel-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.5;
+        font-weight: 600;
+      }
+
       #top-bar a {
         color: #fff;
         display: flex;
@@ -69,16 +95,15 @@
       }
 
       #columns {
-        display: none;
+        display: flex;
+        flex-wrap: wrap;
         font-weight: 300;
-        font-size: 0.85rem;
-        opacity: 0.9;
-        gap: 0.4rem;
+        gap: 0.3rem;
         align-items: center;
       }
 
       #columns span {
-        background: rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.15);
         padding: 0.1rem 0.5rem;
         border-radius: 3px;
         cursor: grab;
@@ -89,18 +114,20 @@
       }
 
       #encodings {
-        display: none;
+        display: flex;
+        flex-wrap: wrap;
         font-weight: 300;
-        font-size: 0.85rem;
-        opacity: 0.9;
-        gap: 0.4rem;
+        gap: 0.3rem;
         align-items: center;
       }
 
       #encodings .encoding {
-        background: rgba(255,255,255,0.3);
-        padding: 0.1rem 0.5rem;
-        border-radius: 3px;
+        background: rgba(255,255,255,0.12);
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
       }
 
       #encodings .encoding .channel {
@@ -109,11 +136,35 @@
 
       #encodings .encoding .field {
         font-weight: 300;
+        background: rgba(255,255,255,0.2);
+        padding: 0 0.35rem;
+        border-radius: 3px;
+        border: 1px solid transparent;
+        transition: border-color 0.15s, background 0.15s;
       }
 
-      #encodings .encoding.drag-over {
-        outline: 2px solid #fff;
-        background: rgba(255,255,255,0.5);
+      #encodings .encoding .field-empty {
+        font-weight: 300;
+        font-style: italic;
+        opacity: 0.5;
+        background: rgba(255,255,255,0.08);
+        padding: 0 0.35rem;
+        border-radius: 3px;
+        border: 1px dashed rgba(255,255,255,0.25);
+        transition: border-color 0.15s, background 0.15s;
+      }
+
+      #encodings .encoding.drop-target .field,
+      #encodings .encoding.drop-target .field-empty {
+        border-color: rgba(255,255,255,0.6);
+        border-style: dashed;
+      }
+
+      #encodings .encoding.drag-over .field,
+      #encodings .encoding.drag-over .field-empty {
+        border-color: #fff;
+        border-style: solid;
+        background: rgba(255,255,255,0.35);
       }
 
       #content {
@@ -189,8 +240,6 @@
   <body>
     <div id="top-bar">
       <span>scattered <span id="dataset-name"></span> <button id="reset-btn">&#x2715;</button> <button id="screenshot-btn">&#x1F4F7; Screenshot</button></span>
-      <div id="columns"></div>
-      <div id="encodings"></div>
       <a href="https://github.com/dvdkouril/scattered" target="_blank" aria-label="GitHub repository">
         <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       </a>
@@ -209,15 +258,24 @@
     <input type="file" id="file-input" accept=".arrow,.csv" />
     <div id="error"></div>
     </div>
+    <div id="mapping-panel">
+      <span class="panel-label">columns</span>
+      <div id="columns"></div>
+      <span class="panel-label">encodings</span>
+      <div id="encodings"></div>
+    </div>
     <div id="viz"></div>
 
     <script type="module">
       import * as sctrd from "./lib/main.ts";
       import * as aq from "https://cdn.jsdelivr.net/npm/arquero@8/+esm";
       import { tableFromArrays, tableFromIPC, tableToIPC } from "@uwdata/flechette";
+      import { draggable, dropTargetForElements } from "https://cdn.jsdelivr.net/npm/@atlaskit/pragmatic-drag-and-drop@1.7.7/element/adapter/+esm";
+      import { combine } from "https://cdn.jsdelivr.net/npm/@atlaskit/pragmatic-drag-and-drop@1.7.7/combine/+esm";
 
       const datasetNameEl = document.getElementById("dataset-name");
       const resetBtn = document.getElementById("reset-btn");
+      const mappingPanel = document.getElementById("mapping-panel");
       const columnsEl = document.getElementById("columns");
       const encodingsEl = document.getElementById("encodings");
       const contentEl = document.getElementById("content");
@@ -232,6 +290,7 @@
       let currentScreenshot = null;
       let currentEncoding = { x: "x", y: "y", z: "z" };
       let currentBuffer = null;
+      let dndCleanup = null;
 
       screenshotBtn.addEventListener("click", () => {
         if (currentScreenshot) {
@@ -244,16 +303,18 @@
         for (const name of columnNames) {
           const span = document.createElement("span");
           span.textContent = name;
-          span.draggable = true;
-          span.addEventListener("dragstart", (e) => {
-            e.dataTransfer.setData("text/plain", name);
-          });
           columnsEl.appendChild(span);
         }
-        columnsEl.style.display = "flex";
+        mappingPanel.style.display = "flex";
       }
 
       function renderEncodings() {
+        // Clean up previous drag-and-drop registrations
+        if (dndCleanup) {
+          dndCleanup();
+          dndCleanup = null;
+        }
+
         const channels = ["x", "y", "z", "color"];
         encodingsEl.innerHTML = "";
         for (const ch of channels) {
@@ -261,25 +322,50 @@
           span.className = "encoding";
           const field = currentEncoding[ch];
           if (field) {
-            span.innerHTML = `<span class="channel">${ch}</span> → <span class="field">${field}</span>`;
+            span.innerHTML = `<span class="channel">${ch}</span><span class="field">${field}</span>`;
           } else {
-            span.innerHTML = `<span class="channel">${ch}</span>`;
+            span.innerHTML = `<span class="channel">${ch}</span><span class="field-empty">drop</span>`;
           }
-          span.addEventListener("dragover", (e) => e.preventDefault());
-          span.addEventListener("dragenter", () => span.classList.add("drag-over"));
-          span.addEventListener("dragleave", () => span.classList.remove("drag-over"));
-          span.addEventListener("drop", (e) => {
-            e.preventDefault();
-            span.classList.remove("drag-over");
-            const col = e.dataTransfer.getData("text/plain");
-            if (!col) return;
-            currentEncoding[ch] = col;
-            renderEncodings();
-            redisplay();
-          });
           encodingsEl.appendChild(span);
         }
-        encodingsEl.style.display = "flex";
+
+        // Register drag-and-drop with Pragmatic
+        const cleanups = [];
+
+        for (const colSpan of columnsEl.querySelectorAll("span")) {
+          cleanups.push(draggable({
+            element: colSpan,
+            getInitialData: () => ({ columnName: colSpan.textContent }),
+            onDragStart: () => {
+              colSpan.style.opacity = "0.5";
+              encodingsEl.querySelectorAll(".encoding").forEach(el => el.classList.add("drop-target"));
+            },
+            onDrop: () => {
+              colSpan.style.opacity = "";
+              encodingsEl.querySelectorAll(".encoding").forEach(el => el.classList.remove("drop-target"));
+            },
+          }));
+        }
+
+        for (const encSpan of encodingsEl.querySelectorAll(".encoding")) {
+          const ch = encSpan.querySelector(".channel").textContent;
+          cleanups.push(dropTargetForElements({
+            element: encSpan,
+            getData: () => ({ channel: ch }),
+            onDragEnter: () => encSpan.classList.add("drag-over"),
+            onDragLeave: () => encSpan.classList.remove("drag-over"),
+            onDrop: ({ source }) => {
+              encSpan.classList.remove("drag-over");
+              const col = source.data.columnName;
+              if (!col) return;
+              currentEncoding[ch] = col;
+              renderEncodings();
+              redisplay();
+            },
+          }));
+        }
+
+        dndCleanup = combine(...cleanups);
       }
 
       function redisplay() {
@@ -323,6 +409,10 @@
           currentDestroy();
           currentDestroy = null;
         }
+        if (dndCleanup) {
+          dndCleanup();
+          dndCleanup = null;
+        }
         currentBuffer = null;
         vizEl.innerHTML = "";
         vizEl.style.display = "none";
@@ -331,9 +421,8 @@
         screenshotBtn.style.display = "none";
         currentScreenshot = null;
         columnsEl.innerHTML = "";
-        columnsEl.style.display = "none";
         encodingsEl.innerHTML = "";
-        encodingsEl.style.display = "none";
+        mappingPanel.style.display = "none";
         fileInput.value = "";
         contentEl.style.display = "flex";
       });
