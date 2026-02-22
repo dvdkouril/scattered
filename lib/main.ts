@@ -146,9 +146,18 @@ function mapQuantitativeValuesToColors(
   min?: number,
   max?: number,
 ): Float32Array {
-  //~ prepare the color scale
-  min = min ?? 0; // default range <0, 1> seems reasonable...
-  max = max ?? 1;
+  //~ prepare the color scale: compute range from data if not provided
+  if (min === undefined || max === undefined) {
+    let dataMin = Infinity;
+    let dataMax = -Infinity;
+    for (let i = 0; i < values.length; i++) {
+      const v = Number(values[i]);
+      if (v < dataMin) dataMin = v;
+      if (v > dataMax) dataMax = v;
+    }
+    min = min ?? dataMin;
+    max = max ?? dataMax;
+  }
 
   //~ asserting that the colorScale supplied is a valid chroma scale
   if (typeof colorScale === "string") {
