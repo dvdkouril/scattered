@@ -46,6 +46,8 @@ class Widget(anywidget.AnyWidget):
     encoding = traitlets.Dict().tag(sync=True)
     # Options for the visualization (e.g., background color)
     options = traitlets.Dict().tag(sync=True)
+    # Indices of points selected via lasso (synced from JS)
+    selected_indices = traitlets.List(traitlets.Int()).tag(sync=True)
 
     def __init__(self, input, encoding=None, options=None):
         """
@@ -80,3 +82,40 @@ class Widget(anywidget.AnyWidget):
             raise ValueError("Unsupported input type. Supported types are: str (URL), pd.DataFrame, np.ndarray, bytes (Arrow format).")
 
         super().__init__(input_table=input_as_arrow_bytes, encoding=encoding or {})
+
+    def selected_to_numpy(self):
+        """Return the selected points as a numpy array of shape (N, 3).
+
+        Returns:
+            numpy.ndarray: Array of x, y, z coordinates for selected points.
+        """
+        if not self.selected_indices:
+            return np.empty((0, 3))
+
+        reader = pa.ipc.open_stream(self.input_table)
+        table = reader.read_all()
+        subset = table.take(self.selected_indices)
+
+        enc = self.encoding or {}
+        x_col = enc.get("x", "x")
+        y_col = enc.get("y", "y")
+        z_col = enc.get("z", "z")
+        return np.column_stack([
+            subset.column(x_col).to_numpy(),
+            subset.column(y_col).to_numpy(),
+            subset.column(z_col).to_numpy(),
+        ])
+
+    def selected_to_dataframe(self):
+        """Return the selected points as a pandas DataFrame with all columns.
+
+        Returns:
+            pandas.DataFrame: Subset of the input data for selected points.
+        """
+        if not self.selected_indices:
+            return pd.DataFrame()
+
+        reader = pa.ipc.open_stream(self.input_table)
+        table = reader.read_all()
+        subset = table.take(self.selected_indices)
+        return subset.to_pandas()

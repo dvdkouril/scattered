@@ -7,6 +7,7 @@ export type Encoding = {
 
 export type DisplayOptions = {
 	backgroundColor?: string;
+	onSelect?: (indices: number[]) => void;
 };
 
 export type ScreenshotOptions = {
