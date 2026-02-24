@@ -3,6 +3,7 @@ import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
 import { DisplayOptions, ScreenshotOptions } from "./types.ts";
+import { findPointsInLasso, ScreenPoint } from "./lasso";
 
 /**
  * Uploads the positional coordinate arrays to GPU buffers. 
@@ -241,6 +242,56 @@ export async function initWebGPUStuff(
   let firstInteractionHappened = false;
   let animFrameId: number;
 
+  // Lasso selection state
+  let isLassoing = false;
+  let lassoPath: ScreenPoint[] = [];
+  let originalColors: Float32Array | null = null;
+
+  // Lasso overlay canvas (2D drawing surface on top of WebGPU canvas)
+  const overlayCanvas = document.createElement("canvas");
+  overlayCanvas.style.position = "absolute";
+  overlayCanvas.style.top = "0";
+  overlayCanvas.style.left = "0";
+  overlayCanvas.style.width = "100%";
+  overlayCanvas.style.height = "100%";
+  overlayCanvas.style.pointerEvents = "none";
+  if (canvas.parentElement) {
+    const parentPos = getComputedStyle(canvas.parentElement).position;
+    if (parentPos === "static") {
+      canvas.parentElement.style.position = "relative";
+    }
+    canvas.parentElement.appendChild(overlayCanvas);
+  }
+  const overlayCtx = overlayCanvas.getContext("2d")!;
+
+  function syncOverlaySize() {
+    const w = overlayCanvas.clientWidth;
+    const h = overlayCanvas.clientHeight;
+    if (overlayCanvas.width !== w || overlayCanvas.height !== h) {
+      overlayCanvas.width = w;
+      overlayCanvas.height = h;
+    }
+  }
+  syncOverlaySize();
+
+  function drawLassoOverlay() {
+    syncOverlaySize();
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    if (lassoPath.length < 2) return;
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(lassoPath[0].x, lassoPath[0].y);
+    for (let i = 1; i < lassoPath.length; i++) {
+      overlayCtx.lineTo(lassoPath[i].x, lassoPath[i].y);
+    }
+    overlayCtx.closePath();
+    overlayCtx.fillStyle = "rgba(255, 105, 180, 0.1)";
+    overlayCtx.fill();
+    overlayCtx.setLineDash([5, 5]);
+    overlayCtx.strokeStyle = "rgba(255, 105, 180, 0.8)";
+    overlayCtx.lineWidth = 2;
+    overlayCtx.stroke();
+  }
+
   function render() {
     animFrameId = requestAnimationFrame(render);
 
@@ -326,6 +377,9 @@ export async function initWebGPUStuff(
         view: newDepthTexture.createView(),
       };
 
+      // Sync overlay canvas buffer to its CSS size
+      syncOverlaySize();
+
       // re-render
       render();
     }
@@ -338,14 +392,74 @@ export async function initWebGPUStuff(
       firstInteractionHappened = true;
     }
     canvas.setPointerCapture(event.pointerId);
+
+    if (event.shiftKey) {
+      isLassoing = true;
+      lassoPath = [{ x: event.offsetX, y: event.offsetY }];
+      return;
+    }
+
     camera.onPointerDown(event);
   }
 
   function onPointerUp(event: PointerEvent) {
+    if (isLassoing) {
+      isLassoing = false;
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+      // Compute camera matrices
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const cameraPosition = firstInteractionHappened
+        ? camera.getPosition()
+        : vec3.fromValues(
+            Math.cos(autoOrbiting.angle) * autoOrbiting.radius,
+            0,
+            Math.sin(autoOrbiting.angle) * autoOrbiting.radius,
+          );
+      const projectionMatrix = prepareCameraMatrix(w, h);
+      const viewMatrix = prepareViewMatrix(cameraPosition);
+
+      const selectedIndices = findPointsInLasso(
+        xArray, yArray, zArray,
+        projectionMatrix, viewMatrix,
+        w, h, positionsScale, lassoPath,
+      );
+
+      console.log(`Lasso selected ${selectedIndices.length} points:`, selectedIndices);
+
+      // Save original colors on first selection
+      if (!originalColors) {
+        originalColors = new Float32Array(colorsArray);
+      }
+
+      if (selectedIndices.length > 0) {
+        const newColors = new Float32Array(originalColors);
+        for (const idx of selectedIndices) {
+          newColors[idx * 4 + 0] = 1.0;   // R
+          newColors[idx * 4 + 1] = 0.412; // G
+          newColors[idx * 4 + 2] = 0.706; // B
+          newColors[idx * 4 + 3] = 1;     // A
+        }
+        device.queue.writeBuffer(colorsBuffer, 0, newColors);
+      } else {
+        // No selection: restore original colors
+        device.queue.writeBuffer(colorsBuffer, 0, originalColors);
+      }
+
+      return;
+    }
+
     camera.onPointerUp(event);
   }
 
   function onMouseMove(event: MouseEvent) {
+    if (isLassoing) {
+      lassoPath.push({ x: event.offsetX, y: event.offsetY });
+      drawLassoOverlay();
+      return;
+    }
+
     camera.onMouseMove(event);
   }
 
@@ -477,6 +591,7 @@ export async function initWebGPUStuff(
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("wheel", onWheel);
+      overlayCanvas.remove();
       device.destroy();
     },
     screenshot,
