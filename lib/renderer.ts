@@ -428,6 +428,11 @@ export async function initWebGPUStuff(
 
       console.log(`Lasso selected ${selectedIndices.length} points:`, selectedIndices);
 
+      // Notify via callback
+      if (options?.onSelect) {
+        options.onSelect(selectedIndices);
+      }
+
       // Save original colors on first selection
       if (!originalColors) {
         originalColors = new Float32Array(colorsArray);
