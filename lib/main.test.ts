@@ -39,7 +39,7 @@ describe('mapValuesToColors', () => {
 
 function makeArrowBuffer(data: Record<string, number[]>): ArrayBuffer {
   const table = tableFromArrays(data);
-  return tableToIPC(table, {}).buffer;
+  return tableToIPC(table, {})!.buffer;
 }
 
 describe('display', () => {
