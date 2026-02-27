@@ -325,9 +325,7 @@ export async function initWebGPUStuff(
       cameraPosition = camera.getPosition();
     }
     const projectionMatrix = prepareCameraMatrix(w, h);
-    const viewMatrix = prepareViewMatrix(cameraPosition);
-    // console.log("cameraPosition");
-    // console.log(cameraPosition);
+    const viewMatrix = prepareViewMatrix(cameraPosition, camera.target);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
@@ -418,7 +416,7 @@ export async function initWebGPUStuff(
           Math.sin(autoOrbiting.angle) * autoOrbiting.radius,
         );
       const projectionMatrix = prepareCameraMatrix(w, h);
-      const viewMatrix = prepareViewMatrix(cameraPosition);
+      const viewMatrix = prepareViewMatrix(cameraPosition, camera.target);
 
       const selectedIndices = findPointsInLasso(
         xArray, yArray, zArray,
@@ -467,7 +465,7 @@ export async function initWebGPUStuff(
       return;
     }
 
-    camera.onMouseMove(event);
+    camera.onMouseMove(event, canvas.clientHeight);
   }
 
   function onWheel(event: WheelEvent) {
@@ -482,6 +480,8 @@ export async function initWebGPUStuff(
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("wheel", onWheel);
+  function onContextMenu(event: Event) { event.preventDefault(); }
+  canvas.addEventListener("contextmenu", onContextMenu);
   canvas.style.touchAction = 'none'; //~ disable page scroll
 
   async function screenshot(options?: ScreenshotOptions): Promise<void> {
@@ -551,7 +551,7 @@ export async function initWebGPUStuff(
 
     // 5. Compute matrices using offscreen dimensions for correct aspect ratio
     const projectionMatrix = prepareCameraMatrix(w, h);
-    const viewMatrix = prepareViewMatrix(cameraPosition);
+    const viewMatrix = prepareViewMatrix(cameraPosition, camera.target);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array;
     const viewMatAsF32A = viewMatrix as Float32Array;
@@ -598,6 +598,7 @@ export async function initWebGPUStuff(
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("contextmenu", onContextMenu);
       overlayCanvas.remove();
       device.destroy();
     },
