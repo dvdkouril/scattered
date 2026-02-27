@@ -413,10 +413,10 @@ export async function initWebGPUStuff(
       const cameraPosition = firstInteractionHappened
         ? camera.getPosition()
         : vec3.fromValues(
-            Math.cos(autoOrbiting.angle) * autoOrbiting.radius,
-            0,
-            Math.sin(autoOrbiting.angle) * autoOrbiting.radius,
-          );
+          Math.cos(autoOrbiting.angle) * autoOrbiting.radius,
+          0,
+          Math.sin(autoOrbiting.angle) * autoOrbiting.radius,
+        );
       const projectionMatrix = prepareCameraMatrix(w, h);
       const viewMatrix = prepareViewMatrix(cameraPosition);
 
@@ -446,9 +446,11 @@ export async function initWebGPUStuff(
           newColors[idx * 4 + 2] = 0.706; // B
           newColors[idx * 4 + 3] = 1;     // A
         }
+        assert(device, "device should not be null or undefined at this point!");
         device.queue.writeBuffer(colorsBuffer, 0, newColors);
       } else {
         // No selection: restore original colors
+        assert(device, "device should not be null or undefined at this point!");
         device.queue.writeBuffer(colorsBuffer, 0, originalColors);
       }
 
