@@ -38,7 +38,7 @@ export class Camera {
   }
 
   onPointerDown(event: PointerEvent) {
-    if (event.button === 2) {
+    if (event.button === 2 || event.altKey) {
       this.#panning = true;
     } else {
       this.#dragging = true;
