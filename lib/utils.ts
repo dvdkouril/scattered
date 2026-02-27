@@ -14,7 +14,7 @@ export function showCanvasError(canvas: HTMLCanvasElement, message: string) {
     ctx.fillRect(0, 0, displayWidth, displayHeight);
     ctx.fillStyle = '#ccc';
     ctx.font = '14px sans-serif';
-    ctx.fillText(message, 16, 32);
+    ctx.fillText(message, 16, displayHeight - 16);
   }
 }
 
