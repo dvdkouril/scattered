@@ -3,7 +3,7 @@ import { vec3 } from "gl-matrix";
 const PHI_MIN = 0.01;
 const PHI_MAX = Math.PI - 0.01;
 const ROTATION_SPEED = 0.01;
-const PAN_SPEED = 0.0005;
+const FOVY = Math.PI / 4; // must match the FOV used in prepareCameraMatrix
 
 /* Loosely inspired by https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/OrbitControls.js
  * ...but worse. */
@@ -50,7 +50,7 @@ export class Camera {
     this.#panning = false;
   }
 
-  onMouseMove(event: MouseEvent) {
+  onMouseMove(event: MouseEvent, viewportHeight?: number) {
     if (this.#panning) {
       // Compute camera right and up vectors in world space
       const eye = this.getPosition();
@@ -67,8 +67,9 @@ export class Camera {
       vec3.cross(up, right, forward);
       vec3.normalize(up, up);
 
-      // Translate target in the camera's local right/up plane
-      const panScale = PAN_SPEED * this.#radius;
+      // Three.js-style scaling: 2 * pixelDelta * distance * tan(fov/2) / canvasHeight
+      const h = viewportHeight ?? 1;
+      const panScale = 2 * this.#radius * Math.tan(FOVY / 2) / h;
       const dx = -event.movementX * panScale;
       const dy = event.movementY * panScale;
 

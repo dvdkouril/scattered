@@ -465,7 +465,7 @@ export async function initWebGPUStuff(
       return;
     }
 
-    camera.onMouseMove(event);
+    camera.onMouseMove(event, canvas.clientHeight);
   }
 
   function onWheel(event: WheelEvent) {
