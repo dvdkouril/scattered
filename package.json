@@ -18,6 +18,7 @@
     "test": "vitest run",
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:site": "tsc && vite build --mode site",
     "preview": "vite preview",
     "widget-dev": "esbuild --bundle --minify --loader:.css=text --format=esm --outfile=src/scattered/widget.js lib/widget.js --sourcemap=inline --watch",
     "widget-build": "esbuild --bundle --minify --loader:.css=text --format=esm --outfile=src/scattered/widget.js lib/widget.js --sourcemap=inline"
