@@ -40,16 +40,20 @@ struct VSOutput {
     var z = zPositions[instanceIndex] * positionsScale;
     var instPos = vec4f(x, y, z, 1.0);
 
-        //~ impostors: align to alway face camera
-    var eyeToPos = normalize(instPos - uni.eyePosition);
-    var upVec = vec3f(0.0, 1.0, 0.0);
-    var rightVec = cross(eyeToPos.xyz, upVec);
+        //~ impostors: align to always face camera
+    var eyeToPos = normalize(instPos.xyz - uni.eyePosition.xyz);
+    //~ use a fallback reference up when the view direction is near-parallel to world up
+    var worldUp = vec3f(0.0, 1.0, 0.0);
+    if (abs(dot(eyeToPos, worldUp)) > 0.999) {
+        worldUp = vec3f(0.0, 0.0, 1.0);
+    }
+    var rightVec = normalize(cross(eyeToPos, worldUp));
+    var billboardUp = cross(rightVec, eyeToPos);
     var v = pos[vertexIndex] * scale;
-    var vPos = v.x * rightVec + v.y * upVec;
+    var vPos = v.x * rightVec + v.y * billboardUp;
 
         //~ calculate position of each instance vertex
-        //var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
-    var vertPos = instPos + vec4f(vPos, 1.0);
+    var vertPos = instPos + vec4f(vPos, 0.0);
         //~ camera transform + projection
     var transformedPos = uni.projection * uni.view * vertPos;
 

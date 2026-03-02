@@ -31,12 +31,9 @@ export function prepareCameraMatrix(width: number, height: number): mat4 {
   return projMat;
 }
 
-export function prepareViewMatrix(eye: vec3, center: vec3 = vec3.fromValues(0, 0, 0)): mat4 {
+export function prepareViewMatrix(eye: vec3, center: vec3 = vec3.fromValues(0, 0, 0), up: vec3 = vec3.fromValues(0, 1, 0)): mat4 {
   const viewMat = mat4.create();
-
-  const up = vec3.fromValues(0, 1, 0);
   mat4.lookAt(viewMat, eye, center, up);
-
   return viewMat;
 }
 

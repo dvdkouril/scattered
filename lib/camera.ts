@@ -58,9 +58,9 @@ export class Camera {
       vec3.subtract(forward, this.#target, eye);
       vec3.normalize(forward, forward);
 
-      const worldUp = vec3.fromValues(0, 1, 0);
+      const camUp = this.getUpVector();
       const right = vec3.create();
-      vec3.cross(right, forward, worldUp);
+      vec3.cross(right, forward, camUp);
       vec3.normalize(right, right);
 
       const up = vec3.create();
@@ -94,6 +94,17 @@ export class Camera {
     if (event.deltaMode === 2) delta *= 800; // pages → pixels
     this.#radius += delta * 0.01;
     this.#radius = Math.max(0.1, this.#radius);
+  }
+
+  /**
+   * Returns the camera's local up vector derived from spherical coordinates.
+   * This transitions smoothly through the poles, avoiding lookAt gimbal lock.
+   */
+  getUpVector(): vec3 {
+    const upX = -Math.cos(this.#theta) * Math.cos(this.#phi);
+    const upY = Math.sin(this.#phi);
+    const upZ = -Math.sin(this.#theta) * Math.cos(this.#phi);
+    return vec3.fromValues(upX, upY, upZ);
   }
 
   get theta() { return this.#theta; }
