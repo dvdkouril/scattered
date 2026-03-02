@@ -93,12 +93,17 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
         var z = zPositions[instanceIndex] * uni.positionsScale;
         var instPos = vec4f(x, y, z, 1.0);
 
-        //~ impostors: align to alway face camera
-        var eyeToPos = normalize(instPos - uni.eyePosition);
-        var upVec = vec3f(0.0, 1.0, 0.0);
-        var rightVec = cross(upVec, eyeToPos.xyz);
+        //~ impostors: align to always face camera
+        var eyeToPos = normalize(instPos.xyz - uni.eyePosition.xyz);
+        //~ use a fallback reference up when the view direction is near-parallel to world up
+        var worldUp = vec3f(0.0, 1.0, 0.0);
+        if (abs(dot(eyeToPos, worldUp)) > 0.999) {
+            worldUp = vec3f(0.0, 0.0, 1.0);
+        }
+        var rightVec = normalize(cross(eyeToPos, worldUp));
+        var billboardUp = cross(rightVec, eyeToPos);
         var v = pos[vertexIndex] * scale;
-        var vPos = v.x * rightVec + v.y * upVec;
+        var vPos = v.x * rightVec + v.y * billboardUp;
 
         //~ calculate position of each instance vertex
         //var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
@@ -316,16 +321,19 @@ export async function initWebGPUStuff(
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     let cameraPosition: vec3;
+    let cameraUp: vec3;
     // firstInteractionHappened = true; //~ turning off the auto orbiting for now
     if (!firstInteractionHappened) {
       const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
       const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
       cameraPosition = vec3.fromValues(camX, 0, camZ);
+      cameraUp = vec3.fromValues(0, 1, 0);
     } else {
       cameraPosition = camera.getPosition();
+      cameraUp = camera.getUpVector();
     }
     const projectionMatrix = prepareCameraMatrix(w, h);
-    const viewMatrix = prepareViewMatrix(cameraPosition, camera.target);
+    const viewMatrix = prepareViewMatrix(cameraPosition, camera.target, cameraUp);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array; //~ TODO: is this correct???
     const viewMatAsF32A = viewMatrix as Float32Array; //~ TODO: is this correct???
@@ -415,8 +423,11 @@ export async function initWebGPUStuff(
           0,
           Math.sin(autoOrbiting.angle) * autoOrbiting.radius,
         );
+      const cameraUpVec = firstInteractionHappened
+        ? camera.getUpVector()
+        : vec3.fromValues(0, 1, 0);
       const projectionMatrix = prepareCameraMatrix(w, h);
-      const viewMatrix = prepareViewMatrix(cameraPosition, camera.target);
+      const viewMatrix = prepareViewMatrix(cameraPosition, camera.target, cameraUpVec);
 
       const selectedIndices = findPointsInLasso(
         xArray, yArray, zArray,
@@ -541,17 +552,20 @@ export async function initWebGPUStuff(
 
     // 4. Compute camera position (respecting current orbit/interaction state)
     let cameraPosition: vec3;
+    let cameraUpVec: vec3;
     if (!firstInteractionHappened) {
       const camX = Math.cos(autoOrbiting.angle) * autoOrbiting.radius;
       const camZ = Math.sin(autoOrbiting.angle) * autoOrbiting.radius;
       cameraPosition = vec3.fromValues(camX, 0, camZ);
+      cameraUpVec = vec3.fromValues(0, 1, 0);
     } else {
       cameraPosition = camera.getPosition();
+      cameraUpVec = camera.getUpVector();
     }
 
     // 5. Compute matrices using offscreen dimensions for correct aspect ratio
     const projectionMatrix = prepareCameraMatrix(w, h);
-    const viewMatrix = prepareViewMatrix(cameraPosition, camera.target);
+    const viewMatrix = prepareViewMatrix(cameraPosition, camera.target, cameraUpVec);
 
     const projectionMatAsF32A = projectionMatrix as Float32Array;
     const viewMatAsF32A = viewMatrix as Float32Array;
