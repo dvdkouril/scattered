@@ -1,6 +1,6 @@
 [project]
 name = "scattered"
-version = "0.0.1"
+version = "0.0.7" # x-release-please-version
 description = "3D scatterplots are useless, but fun"
 readme = "README.md"
 authors = [
