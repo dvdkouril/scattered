@@ -4,6 +4,7 @@ import { Camera } from "./camera";
 import { assert } from "./assert";
 import { DisplayOptions, ScreenshotOptions } from "./types.ts";
 import { findPointsInLasso, ScreenPoint } from "./lasso";
+import { loadSpriteMap, SpriteMapResult } from "./sprite";
 
 /**
  * Uploads the positional coordinate arrays to GPU buffers. 
@@ -150,6 +151,149 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
   return pipeline;
 }
 
+export function createSpriteShaders(device: GPUDevice, presentationFormat: GPUTextureFormat): GPURenderPipeline {
+  const module = device.createShaderModule({
+    label: 'sprite billboard quads',
+    code: `
+      struct Uniforms {
+        projection: mat4x4f,
+        view: mat4x4f,
+        eyePosition: vec4f,
+        positionsScale: f32,
+      };
+
+      struct SpriteUniforms {
+        gridCols: f32,
+        gridRows: f32,
+      };
+
+      struct VSOutput {
+        @builtin(position) position: vec4f,
+        @location(0) color: vec4f,
+        @location(1) uv: vec2f,
+      }
+
+      @group(0) @binding(1) var<uniform> uni: Uniforms;
+      @group(0) @binding(2) var<storage, read> xPositions: array<f32>;
+      @group(0) @binding(3) var<storage, read> yPositions: array<f32>;
+      @group(0) @binding(4) var<storage, read> zPositions: array<f32>;
+      @group(0) @binding(5) var<storage, read> colors: array<vec4f>;
+      @group(0) @binding(6) var spriteSampler: sampler;
+      @group(0) @binding(7) var spriteTexture: texture_2d<f32>;
+      @group(0) @binding(8) var<uniform> spriteUni: SpriteUniforms;
+
+      @vertex fn vs(
+        @builtin(vertex_index) vertexIndex : u32,
+        @builtin(instance_index) instanceIndex: u32
+      ) -> VSOutput {
+        // Quad geometry: two triangles forming a square
+        let quadPos = array(
+          vec2f(-0.5,  0.5),  // top-left
+          vec2f(-0.5, -0.5),  // bottom-left
+          vec2f( 0.5, -0.5),  // bottom-right
+          vec2f(-0.5,  0.5),  // top-left
+          vec2f( 0.5, -0.5),  // bottom-right
+          vec2f( 0.5,  0.5),  // top-right
+        );
+
+        let quadUV = array(
+          vec2f(0.0, 0.0),  // top-left
+          vec2f(0.0, 1.0),  // bottom-left
+          vec2f(1.0, 1.0),  // bottom-right
+          vec2f(0.0, 0.0),  // top-left
+          vec2f(1.0, 1.0),  // bottom-right
+          vec2f(1.0, 0.0),  // top-right
+        );
+
+        const scale = 0.01;
+
+        var vsOut: VSOutput;
+        var x = xPositions[instanceIndex] * uni.positionsScale;
+        var y = yPositions[instanceIndex] * uni.positionsScale;
+        var z = zPositions[instanceIndex] * uni.positionsScale;
+        var instPos = vec4f(x, y, z, 1.0);
+
+        // Billboard alignment (same as sphere shader)
+        var eyeToPos = normalize(instPos.xyz - uni.eyePosition.xyz);
+        var worldUp = vec3f(0.0, 1.0, 0.0);
+        if (abs(dot(eyeToPos, worldUp)) > 0.999) {
+            worldUp = vec3f(0.0, 0.0, 1.0);
+        }
+        var rightVec = normalize(cross(eyeToPos, worldUp));
+        var billboardUp = cross(rightVec, eyeToPos);
+        var v = quadPos[vertexIndex] * scale;
+        var vPos = v.x * rightVec + v.y * billboardUp;
+
+        var vertPos = instPos + vec4f(vPos, 0.0);
+        var transformedPos = uni.projection * uni.view * vertPos;
+
+        // Compute sprite map UV from instance index
+        let gridCols = u32(spriteUni.gridCols);
+        let col = instanceIndex % gridCols;
+        let row = instanceIndex / gridCols;
+        let tileSizeU = 1.0 / spriteUni.gridCols;
+        let tileSizeV = 1.0 / spriteUni.gridRows;
+        let localUV = quadUV[vertexIndex];
+        let spriteUV = vec2f(
+          (f32(col) + localUV.x) * tileSizeU,
+          (f32(row) + localUV.y) * tileSizeV,
+        );
+
+        vsOut.position = transformedPos;
+        vsOut.color = colors[instanceIndex];
+        vsOut.uv = spriteUV;
+        return vsOut;
+      }
+
+      @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+        let texColor = textureSample(spriteTexture, spriteSampler, vsOut.uv);
+        // Discard fully transparent pixels (RGBA sprites) or near-black
+        // pixels (RGB sprites with black backgrounds)
+        let luminance = dot(texColor.rgb, vec3f(0.299, 0.587, 0.114));
+        if (texColor.a < 0.01 || luminance < 0.05) {
+          discard;
+        }
+        return texColor;
+      }
+    `,
+  });
+
+  const pipeline = device.createRenderPipeline({
+    label: 'sprite billboard pipeline',
+    layout: 'auto',
+    vertex: {
+      entryPoint: 'vs',
+      module,
+    },
+    fragment: {
+      entryPoint: 'fs',
+      module,
+      targets: [{
+        format: presentationFormat,
+        blend: {
+          color: {
+            srcFactor: 'src-alpha',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
+          },
+          alpha: {
+            srcFactor: 'one',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
+          },
+        },
+      }],
+    },
+    depthStencil: {
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      format: 'depth24plus',
+    },
+  });
+
+  return pipeline;
+}
+
 export async function initWebGPUStuff(
   canvas: HTMLCanvasElement,
   xArray: Float32Array,
@@ -160,11 +304,18 @@ export async function initWebGPUStuff(
   options?: DisplayOptions,
 ): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
-  const device = await adapter?.requestDevice();
+  console.log(`Adapter max texture size: ${adapter?.limits.maxTextureDimension2D}`);
+  const device = await adapter?.requestDevice({
+    requiredLimits: {
+      maxTextureDimension2D: adapter?.limits.maxTextureDimension2D,
+    },
+  });
   if (!device) {
     showCanvasError(canvas, '`scattered` requires the WebGPU API, which is not supported in this browser.');
     return;
   }
+
+  console.log(`Max texture size: ${device.limits.maxTextureDimension2D}`);
 
   // Get a WebGPU context from the canvas and configure it
   const context = canvas.getContext('webgpu');
@@ -178,7 +329,23 @@ export async function initWebGPUStuff(
     format: presentationFormat,
   });
 
-  const pipeline = createShaders(device, presentationFormat);
+  const isSpriteMode = !!options?.spriteMapUrl;
+  let spriteMap: SpriteMapResult | undefined;
+
+  if (isSpriteMode) {
+    spriteMap = await loadSpriteMap(
+      device,
+      options!.spriteMapUrl!,
+      options!.thumbnailWidth ?? 28,
+      options!.thumbnailHeight ?? 28,
+    );
+  }
+
+  const pipeline = isSpriteMode
+    ? createSpriteShaders(device, presentationFormat)
+    : createShaders(device, presentationFormat);
+
+  const verticesPerInstance = isSpriteMode ? 6 : 3;
 
   const [xBuffer, yBuffer, zBuffer, colorsBuffer] = uploadDataToGPU(
     device,
@@ -196,18 +363,37 @@ export async function initWebGPUStuff(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  //const uniformValues = new Float32Array(uniformBufferSize / 4);
+  const bindGroupEntries: GPUBindGroupEntry[] = [
+    { binding: 1, resource: { buffer: uniformBuffer } },
+    { binding: 2, resource: { buffer: xBuffer } },
+    { binding: 3, resource: { buffer: yBuffer } },
+    { binding: 4, resource: { buffer: zBuffer } },
+    { binding: 5, resource: { buffer: colorsBuffer } },
+  ];
+
+  if (isSpriteMode && spriteMap) {
+    // Sprite uniforms buffer: gridCols (f32) + gridRows (f32), padded to 16 bytes
+    const spriteUniformBuffer = device.createBuffer({
+      label: 'sprite uniforms',
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(
+      spriteUniformBuffer,
+      0,
+      new Float32Array([spriteMap.gridCols, spriteMap.gridRows, 0, 0]),
+    );
+
+    bindGroupEntries.push(
+      { binding: 6, resource: spriteMap.sampler },
+      { binding: 7, resource: spriteMap.texture.createView() },
+      { binding: 8, resource: { buffer: spriteUniformBuffer } },
+    );
+  }
 
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
-    entries: [
-      //{ binding: 0, resource: { buffer: dataBuffer } },
-      { binding: 1, resource: { buffer: uniformBuffer } },
-      { binding: 2, resource: { buffer: xBuffer } },
-      { binding: 3, resource: { buffer: yBuffer } },
-      { binding: 4, resource: { buffer: zBuffer } },
-      { binding: 5, resource: { buffer: colorsBuffer } },
-    ],
+    entries: bindGroupEntries,
   });
 
   const depthTexture = device.createTexture({
@@ -241,9 +427,9 @@ export async function initWebGPUStuff(
   let autoOrbiting = {
     angle: 0,
     speed: 0.01,
-    radius: 3,
+    radius: 5,
   };
-  let camera = new Camera();
+  let camera = new Camera(0, 5);
   let firstInteractionHappened = false;
   let animFrameId: number;
 
@@ -349,7 +535,7 @@ export async function initWebGPUStuff(
 
     const numOfObjects = xArray.length; //~ TODO: kinda hacky
     pass.setBindGroup(0, bindGroup);
-    pass.draw(3, numOfObjects);
+    pass.draw(verticesPerInstance, numOfObjects);
     pass.end();
 
     const commandBuffer = encoder.finish();
@@ -584,7 +770,7 @@ export async function initWebGPUStuff(
     const pass = encoder.beginRenderPass(offRenderPassDescriptor);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.draw(3, xArray.length);
+    pass.draw(verticesPerInstance, xArray.length);
     pass.end();
     device.queue.submit([encoder.finish()]);
 

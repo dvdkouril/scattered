@@ -1,0 +1,127 @@
+export type SpriteMapResult = {
+  texture: GPUTexture;
+  sampler: GPUSampler;
+  gridCols: number;
+  gridRows: number;
+};
+
+/**
+ * If the source image exceeds GPU texture limits, re-layout the tiles into a
+ * squarer grid that fits. Returns an ImageBitmap ready for GPU upload along
+ * with the new grid dimensions.
+ */
+function relayoutIfNeeded(
+  source: ImageBitmap,
+  thumbnailWidth: number,
+  thumbnailHeight: number,
+  maxTextureSize: number,
+): { bitmap: ImageBitmap; gridCols: number; gridRows: number } | null {
+  const srcCols = Math.floor(source.width / thumbnailWidth);
+  const srcRows = Math.floor(source.height / thumbnailHeight);
+
+  if (source.width <= maxTextureSize && source.height <= maxTextureSize) {
+    return null; // no relayout needed
+  }
+
+  const totalTiles = srcCols * srcRows;
+
+  // Compute a new square-ish grid that fits within maxTextureSize
+  const maxCols = Math.floor(maxTextureSize / thumbnailWidth);
+  const newCols = Math.min(maxCols, Math.ceil(Math.sqrt(totalTiles)));
+  const newRows = Math.ceil(totalTiles / newCols);
+
+  const newWidth = newCols * thumbnailWidth;
+  const newHeight = newRows * thumbnailHeight;
+
+  if (newWidth > maxTextureSize || newHeight > maxTextureSize) {
+    throw new Error(
+      `Sprite map has ${totalTiles} tiles — even after relayout the texture ` +
+      `(${newWidth}x${newHeight}) exceeds the GPU limit of ${maxTextureSize}.`,
+    );
+  }
+
+  const canvas = new OffscreenCanvas(newWidth, newHeight);
+  const ctx = canvas.getContext("2d")!;
+
+  for (let i = 0; i < totalTiles; i++) {
+    const srcCol = i % srcCols;
+    const srcRow = Math.floor(i / srcCols);
+    const dstCol = i % newCols;
+    const dstRow = Math.floor(i / newCols);
+
+    ctx.drawImage(
+      source,
+      srcCol * thumbnailWidth,
+      srcRow * thumbnailHeight,
+      thumbnailWidth,
+      thumbnailHeight,
+      dstCol * thumbnailWidth,
+      dstRow * thumbnailHeight,
+      thumbnailWidth,
+      thumbnailHeight,
+    );
+  }
+
+  // createImageBitmap from OffscreenCanvas is synchronous-ish but returns a
+  // promise — the caller will await it.  However we can also just use the
+  // canvas as a copy source directly.  For simplicity we return via
+  // transferToImageBitmap which is sync.
+  const bitmap = canvas.transferToImageBitmap();
+  return { bitmap, gridCols: newCols, gridRows: newRows };
+}
+
+export async function loadSpriteMap(
+  device: GPUDevice,
+  url: string,
+  thumbnailWidth: number,
+  thumbnailHeight: number,
+): Promise<SpriteMapResult> {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  const imageBitmap = await createImageBitmap(blob);
+
+  const maxTextureSize = device.limits.maxTextureDimension2D;
+
+  let uploadSource: ImageBitmap = imageBitmap;
+  let gridCols = Math.floor(imageBitmap.width / thumbnailWidth);
+  let gridRows = Math.floor(imageBitmap.height / thumbnailHeight);
+
+  const relayout = relayoutIfNeeded(
+    imageBitmap,
+    thumbnailWidth,
+    thumbnailHeight,
+    maxTextureSize,
+  );
+  if (relayout) {
+    uploadSource = relayout.bitmap;
+    gridCols = relayout.gridCols;
+    gridRows = relayout.gridRows;
+    imageBitmap.close();
+  }
+
+  const texture = device.createTexture({
+    label: "sprite map texture",
+    size: [uploadSource.width, uploadSource.height, 1],
+    format: "rgba8unorm",
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  device.queue.copyExternalImageToTexture(
+    { source: uploadSource },
+    { texture },
+    [uploadSource.width, uploadSource.height],
+  );
+
+  const sampler = device.createSampler({
+    label: "sprite map sampler",
+    magFilter: "linear",
+    minFilter: "linear",
+  });
+
+  uploadSource.close();
+
+  return { texture, sampler, gridCols, gridRows };
+}

@@ -8,6 +8,9 @@ export type Encoding = {
 export type DisplayOptions = {
 	backgroundColor?: string;
 	onSelect?: (indices: number[]) => void;
+	spriteMapUrl?: string;
+	thumbnailWidth?: number;
+	thumbnailHeight?: number;
 };
 
 export type ScreenshotOptions = {
