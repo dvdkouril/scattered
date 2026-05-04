@@ -1,4 +1,4 @@
-import * as sctrd from "./main.ts";
+import * as sctrd from "../lib/main.ts";
 
 const SPRITE_MAP_URL = "/data/spritesheet.png";
 const THUMBNAIL_SIZE = 32;

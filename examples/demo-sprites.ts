@@ -1,6 +1,6 @@
-import * as sctrd from "./main.ts";
+import * as sctrd from "../lib/main.ts";
 import { tableFromArrays, tableToIPC } from "@uwdata/flechette";
-import { assert } from "./assert.ts";
+import { assert } from "../lib/assert.ts";
 
 // MNIST 10k sprite sheet from TensorFlow Embedding Projector (100x100 grid of 28x28 tiles)
 const SPRITE_MAP_URL =
