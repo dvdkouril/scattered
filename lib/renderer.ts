@@ -304,18 +304,11 @@ export async function initWebGPUStuff(
   options?: DisplayOptions,
 ): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
-  console.log(`Adapter max texture size: ${adapter?.limits.maxTextureDimension2D}`);
-  const device = await adapter?.requestDevice({
-    requiredLimits: {
-      maxTextureDimension2D: adapter?.limits.maxTextureDimension2D,
-    },
-  });
+  const device = await adapter?.requestDevice();
   if (!device) {
     showCanvasError(canvas, '`scattered` requires the WebGPU API, which is not supported in this browser.');
     return;
   }
-
-  console.log(`Max texture size: ${device.limits.maxTextureDimension2D}`);
 
   // Get a WebGPU context from the canvas and configure it
   const context = canvas.getContext('webgpu');
