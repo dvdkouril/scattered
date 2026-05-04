@@ -70,15 +70,66 @@ function relayoutIfNeeded(
   return { bitmap, gridCols: newCols, gridRows: newRows };
 }
 
+/**
+ * Creates a 1×1 tile magenta (#FF00FF) fallback texture. The sampler uses
+ * repeat addressing so every sprite UV maps to the same magenta fill.
+ */
+function createFallbackSpriteMap(
+  device: GPUDevice,
+  thumbnailWidth: number,
+  thumbnailHeight: number,
+): SpriteMapResult {
+  const texture = device.createTexture({
+    label: "sprite map fallback texture",
+    size: [thumbnailWidth, thumbnailHeight, 1],
+    format: "rgba8unorm",
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+
+  const pixels = new Uint8Array(thumbnailWidth * thumbnailHeight * 4);
+  for (let i = 0; i < pixels.length; i += 4) {
+    pixels[i]     = 0xFF; // R
+    pixels[i + 1] = 0x00; // G
+    pixels[i + 2] = 0xFF; // B
+    pixels[i + 3] = 0xFF; // A
+  }
+  device.queue.writeTexture(
+    { texture },
+    pixels,
+    { bytesPerRow: thumbnailWidth * 4 },
+    [thumbnailWidth, thumbnailHeight],
+  );
+
+  const sampler = device.createSampler({
+    label: "sprite map fallback sampler",
+    magFilter: "linear",
+    minFilter: "linear",
+    addressModeU: "repeat",
+    addressModeV: "repeat",
+  });
+
+  return { texture, sampler, gridCols: 1, gridRows: 1 };
+}
+
 export async function loadSpriteMap(
   device: GPUDevice,
   url: string,
   thumbnailWidth: number,
   thumbnailHeight: number,
 ): Promise<SpriteMapResult> {
-  const response = await fetch(url);
-  const blob = await response.blob();
-  const imageBitmap = await createImageBitmap(blob);
+  let imageBitmap: ImageBitmap;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch sprite map (${response.status}): ${url}`);
+      return createFallbackSpriteMap(device, thumbnailWidth, thumbnailHeight);
+    }
+    const blob = await response.blob();
+    imageBitmap = await createImageBitmap(blob);
+  } catch (err) {
+    console.error(`Failed to load sprite map: ${url}`, err);
+    return createFallbackSpriteMap(device, thumbnailWidth, thumbnailHeight);
+  }
 
   const maxTextureSize = device.limits.maxTextureDimension2D;
 
