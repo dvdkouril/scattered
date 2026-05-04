@@ -362,9 +362,10 @@ export async function initWebGPUStuff(
     { binding: 5, resource: { buffer: colorsBuffer } },
   ];
 
+  let spriteUniformBuffer: GPUBuffer | undefined;
   if (isSpriteMode && spriteMap) {
     // Sprite uniforms buffer: gridCols (f32) + gridRows (f32), padded to 16 bytes
-    const spriteUniformBuffer = device.createBuffer({
+    spriteUniformBuffer = device.createBuffer({
       label: 'sprite uniforms',
       size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -791,6 +792,8 @@ export async function initWebGPUStuff(
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("contextmenu", onContextMenu);
       overlayCanvas.remove();
+      spriteUniformBuffer?.destroy();
+      spriteMap?.texture.destroy();
       device.destroy();
     },
     screenshot,
