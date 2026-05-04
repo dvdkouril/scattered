@@ -247,10 +247,7 @@ export function createSpriteShaders(device: GPUDevice, presentationFormat: GPUTe
 
       @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
         let texColor = textureSample(spriteTexture, spriteSampler, vsOut.uv);
-        // Discard fully transparent pixels (RGBA sprites) or near-black
-        // pixels (RGB sprites with black backgrounds)
-        let luminance = dot(texColor.rgb, vec3f(0.299, 0.587, 0.114));
-        if (texColor.a < 0.01 || luminance < 0.05) {
+        if (texColor.a < 0.01) {
           discard;
         }
         return texColor;
