@@ -62,10 +62,6 @@ function relayoutIfNeeded(
     );
   }
 
-  // createImageBitmap from OffscreenCanvas is synchronous-ish but returns a
-  // promise — the caller will await it.  However we can also just use the
-  // canvas as a copy source directly.  For simplicity we return via
-  // transferToImageBitmap which is sync.
   const bitmap = canvas.transferToImageBitmap();
   return { bitmap, gridCols: newCols, gridRows: newRows };
 }
