@@ -5,7 +5,8 @@ const THUMBNAIL_SIZE = 32;
 // const ARROW_URL = "/data/drawings-embedding.arrow";
 const ARROW_URL = "/data/drawings-embedding-clip.arrow";
 
-const { canvas } = sctrd.display(ARROW_URL, {}, {
+const { canvas } = sctrd.display(ARROW_URL, {
+  mark: "billboard",
   spriteMapUrl: SPRITE_MAP_URL,
   thumbnailWidth: THUMBNAIL_SIZE,
   thumbnailHeight: THUMBNAIL_SIZE,

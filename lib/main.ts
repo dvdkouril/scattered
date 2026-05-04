@@ -1,7 +1,7 @@
 import { loadDataFromURL } from "./loaders.ts";
 import { initWebGPUStuff } from "./renderer.ts";
 import { tableFromIPC } from "@uwdata/flechette";
-import { DisplayOptions, DisplayResult, Encoding } from "./types.ts";
+import { DisplayOptions, DisplayResult, Encoding, SpriteConfig } from "./types.ts";
 import { assert } from "./assert.ts";
 import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
@@ -225,6 +225,11 @@ function display(
     color = undefined
   } = encoding || {};
 
+  const spriteConfig: SpriteConfig | undefined =
+    encoding?.mark === "billboard"
+      ? { spriteMapUrl: encoding.spriteMapUrl, thumbnailWidth: encoding.thumbnailWidth, thumbnailHeight: encoding.thumbnailHeight }
+      : undefined;
+
   if (typeof input === 'string') {
     //~ assuming it's a URL
     const url = input;
@@ -235,7 +240,7 @@ function display(
         console.log(`loaded data of size: ${d.byteLength}`);
 
         const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(d, x, y, z, color);
-        initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(result => {
+        initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options, spriteConfig).then(result => {
           if (result) {
             destroy = result.destroy;
             screenshotFn = result.screenshot;
@@ -251,7 +256,7 @@ function display(
   } else if (input instanceof ArrayBuffer) {
     console.log(`display::using Arrow bytes (${input.byteLength})`);
     const [xArr, yArr, zArr, colorsArr, positionsScale] = processArrow(input, x, y, z, color);
-    initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options).then(result => {
+    initWebGPUStuff(canvas, xArr, yArr, zArr, colorsArr, positionsScale, options, spriteConfig).then(result => {
       if (result) {
         destroy = result.destroy;
         screenshotFn = result.screenshot;

@@ -2,7 +2,7 @@ import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, showCanva
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
-import { DisplayOptions, ScreenshotOptions } from "./types.ts";
+import { DisplayOptions, ScreenshotOptions, SpriteConfig } from "./types.ts";
 import { findPointsInLasso, ScreenPoint } from "./lasso";
 import { loadSpriteMap, SpriteMapResult } from "./sprite";
 
@@ -302,6 +302,7 @@ export async function initWebGPUStuff(
   colorsArray: Float32Array,
   positionsScale: number,
   options?: DisplayOptions,
+  spriteConfig?: SpriteConfig,
 ): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
@@ -322,15 +323,15 @@ export async function initWebGPUStuff(
     format: presentationFormat,
   });
 
-  const isSpriteMode = !!options?.spriteMapUrl;
+  const isSpriteMode = !!spriteConfig?.spriteMapUrl;
   let spriteMap: SpriteMapResult | undefined;
 
   if (isSpriteMode) {
     spriteMap = await loadSpriteMap(
       device,
-      options!.spriteMapUrl!,
-      options!.thumbnailWidth ?? 28,
-      options!.thumbnailHeight ?? 28,
+      spriteConfig!.spriteMapUrl,
+      spriteConfig!.thumbnailWidth,
+      spriteConfig!.thumbnailHeight,
     );
   }
 

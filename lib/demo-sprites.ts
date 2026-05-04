@@ -15,7 +15,8 @@ assert(coordsTable, "should be able to make a table");
 const tableIPC = tableToIPC(coordsTable, {});
 assert(tableIPC, "should be able to make IPC");
 
-const { canvas } = sctrd.display(tableIPC.buffer, {}, {
+const { canvas } = sctrd.display(tableIPC.buffer, {
+  mark: "billboard",
   spriteMapUrl: SPRITE_MAP_URL,
   thumbnailWidth: THUMBNAIL_SIZE,
   thumbnailHeight: THUMBNAIL_SIZE,

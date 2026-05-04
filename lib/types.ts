@@ -1,16 +1,32 @@
-export type Encoding = {
+type BaseEncoding = {
 	x?: string;
 	y?: string;
 	z?: string;
 	color?: string;
 };
 
+type PointEncoding = BaseEncoding & {
+	mark?: "point";
+};
+
+type BillboardEncoding = BaseEncoding & {
+	mark: "billboard";
+	spriteMapUrl: string;
+	thumbnailWidth: number;
+	thumbnailHeight: number;
+};
+
+export type Encoding = PointEncoding | BillboardEncoding;
+
 export type DisplayOptions = {
 	backgroundColor?: string;
 	onSelect?: (indices: number[]) => void;
-	spriteMapUrl?: string;
-	thumbnailWidth?: number;
-	thumbnailHeight?: number;
+};
+
+export type SpriteConfig = {
+	spriteMapUrl: string;
+	thumbnailWidth: number;
+	thumbnailHeight: number;
 };
 
 export type ScreenshotOptions = {
