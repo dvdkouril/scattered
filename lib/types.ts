@@ -9,7 +9,7 @@ type PointEncoding = BaseEncoding & {
 	mark?: "point";
 };
 
-type BillboardEncoding = BaseEncoding & {
+export type BillboardEncoding = BaseEncoding & {
 	mark: "billboard";
 	spriteMapUrl: string;
 	thumbnailWidth: number;
@@ -21,12 +21,6 @@ export type Encoding = PointEncoding | BillboardEncoding;
 export type DisplayOptions = {
 	backgroundColor?: string;
 	onSelect?: (indices: number[]) => void;
-};
-
-export type SpriteConfig = {
-	spriteMapUrl: string;
-	thumbnailWidth: number;
-	thumbnailHeight: number;
 };
 
 export type ScreenshotOptions = {

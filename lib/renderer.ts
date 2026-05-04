@@ -2,7 +2,7 @@ import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, showCanva
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
-import { DisplayOptions, ScreenshotOptions, SpriteConfig } from "./types.ts";
+import { DisplayOptions, ScreenshotOptions, BillboardEncoding } from "./types.ts";
 import { findPointsInLasso, ScreenPoint } from "./lasso";
 import { loadSpriteMap, SpriteMapResult } from "./sprite";
 
@@ -302,7 +302,7 @@ export async function initWebGPUStuff(
   colorsArray: Float32Array,
   positionsScale: number,
   options?: DisplayOptions,
-  spriteConfig?: SpriteConfig,
+  spriteConfig?: BillboardEncoding,
 ): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
