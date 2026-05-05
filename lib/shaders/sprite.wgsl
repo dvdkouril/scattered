@@ -72,6 +72,8 @@ struct VSOutput {
 
   // Compute sprite map UV from instance index
   let gridCols = u32(spriteUni.gridCols);
+  let gridRows = u32(spriteUni.gridRows);
+  let totalTiles = gridCols * gridRows;
   let col = instanceIndex % gridCols;
   let row = instanceIndex / gridCols;
   let tileSizeU = 1.0 / spriteUni.gridCols;
@@ -83,12 +85,22 @@ struct VSOutput {
   );
 
   vsOut.position = transformedPos;
-  vsOut.color = colors[instanceIndex];
+  // Flag out-of-bounds instances with a negative alpha so the fragment shader
+  // can return a debug color instead of sampling the texture.
+  if (instanceIndex >= totalTiles) {
+    vsOut.color = vec4f(1.0, 0.0, 1.0, -1.0);
+  } else {
+    vsOut.color = colors[instanceIndex];
+  }
   vsOut.uv = spriteUV;
   return vsOut;
 }
 
 @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+  // Out-of-bounds instances are flagged with negative alpha in the vertex shader
+  if (vsOut.color.a < 0.0) {
+    return vec4f(1.0, 0.0, 1.0, 1.0); // debug magenta
+  }
   let texColor = textureSample(spriteTexture, spriteSampler, vsOut.uv);
   if (texColor.a < 0.01) {
     discard;
