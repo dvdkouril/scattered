@@ -7,8 +7,8 @@ const ARROW_URL = "/data/drawings-embedding-clip.arrow";
 const { canvas } = sctrd.display(ARROW_URL, {
   mark: "sprite",
   spritesheetUrl: SPRITE_MAP_URL,
-  width: THUMBNAIL_SIZE,
-  height: THUMBNAIL_SIZE,
+  spriteWidth: THUMBNAIL_SIZE,
+  spriteHeight: THUMBNAIL_SIZE,
 });
 
 const appEl = document.querySelector("#app");

@@ -152,8 +152,8 @@ export async function initWebGPUStuff(
     spriteMap = await loadSpriteMap(
       device,
       spriteConfig!.spritesheetUrl,
-      spriteConfig!.width,
-      spriteConfig!.height,
+      spriteConfig!.spriteWidth,
+      spriteConfig!.spriteHeight,
     );
   }
 

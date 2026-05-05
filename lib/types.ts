@@ -12,8 +12,8 @@ type PointEncoding = BaseEncoding & {
 export type SpriteEncoding = BaseEncoding & {
 	mark: "sprite";
 	spritesheetUrl: string;
-	width: number;
-	height: number;
+	spriteWidth: number;
+	spriteHeight: number;
 };
 
 export type Encoding = PointEncoding | SpriteEncoding;
