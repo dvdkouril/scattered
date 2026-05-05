@@ -9,14 +9,14 @@ type PointEncoding = BaseEncoding & {
 	mark?: "point";
 };
 
-export type BillboardEncoding = BaseEncoding & {
-	mark: "billboard";
-	spriteMapUrl: string;
-	thumbnailWidth: number;
-	thumbnailHeight: number;
+export type SpriteEncoding = BaseEncoding & {
+	mark: "sprite";
+	spritesheetUrl: string;
+	width: number;
+	height: number;
 };
 
-export type Encoding = PointEncoding | BillboardEncoding;
+export type Encoding = PointEncoding | SpriteEncoding;
 
 export type DisplayOptions = {
 	backgroundColor?: string;

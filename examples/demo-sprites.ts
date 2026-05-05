@@ -16,10 +16,10 @@ const tableIPC = tableToIPC(coordsTable, {});
 assert(tableIPC, "should be able to make IPC");
 
 const { canvas } = sctrd.display(tableIPC.buffer, {
-  mark: "billboard",
-  spriteMapUrl: SPRITE_MAP_URL,
-  thumbnailWidth: THUMBNAIL_SIZE,
-  thumbnailHeight: THUMBNAIL_SIZE,
+  mark: "sprite",
+  spritesheetUrl: SPRITE_MAP_URL,
+  width: THUMBNAIL_SIZE,
+  height: THUMBNAIL_SIZE,
 }, { backgroundColor: "#cccccc" });
 
 const appEl = document.querySelector("#app");

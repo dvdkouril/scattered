@@ -1,7 +1,7 @@
 import { loadDataFromURL } from "./loaders.ts";
 import { initWebGPUStuff } from "./renderer.ts";
 import { tableFromIPC } from "@uwdata/flechette";
-import { DisplayOptions, DisplayResult, Encoding, BillboardEncoding } from "./types.ts";
+import { DisplayOptions, DisplayResult, Encoding, SpriteEncoding } from "./types.ts";
 import { assert } from "./assert.ts";
 import chroma from "chroma-js";
 import type { Color as ChromaColor } from "chroma-js";
@@ -225,8 +225,8 @@ function display(
     color = undefined
   } = encoding || {};
 
-  const spriteConfig: BillboardEncoding | undefined =
-    encoding?.mark === "billboard" ? encoding : undefined;
+  const spriteConfig: SpriteEncoding | undefined =
+    encoding?.mark === "sprite" ? encoding : undefined;
 
   if (typeof input === 'string') {
     //~ assuming it's a URL

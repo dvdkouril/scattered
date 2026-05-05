@@ -2,7 +2,7 @@ import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, showCanva
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
-import { DisplayOptions, ScreenshotOptions, BillboardEncoding } from "./types.ts";
+import { DisplayOptions, ScreenshotOptions, SpriteEncoding } from "./types.ts";
 import { findPointsInLasso, ScreenPoint } from "./lasso";
 import { loadSpriteMap, SpriteMapResult } from "./sprite";
 import pointShaderSource from "./shaders/point.wgsl?raw";
@@ -124,7 +124,7 @@ export async function initWebGPUStuff(
   colorsArray: Float32Array,
   positionsScale: number,
   options?: DisplayOptions,
-  spriteConfig?: BillboardEncoding,
+  spriteConfig?: SpriteEncoding,
 ): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
@@ -145,15 +145,15 @@ export async function initWebGPUStuff(
     format: presentationFormat,
   });
 
-  const isSpriteMode = !!spriteConfig?.spriteMapUrl;
+  const isSpriteMode = !!spriteConfig?.spritesheetUrl;
   let spriteMap: SpriteMapResult | undefined;
 
   if (isSpriteMode) {
     spriteMap = await loadSpriteMap(
       device,
-      spriteConfig!.spriteMapUrl,
-      spriteConfig!.thumbnailWidth,
-      spriteConfig!.thumbnailHeight,
+      spriteConfig!.spritesheetUrl,
+      spriteConfig!.width,
+      spriteConfig!.height,
     );
   }
 
