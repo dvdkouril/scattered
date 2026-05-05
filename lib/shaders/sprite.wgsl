@@ -48,7 +48,7 @@ struct VSOutput {
     vec2f(1.0, 0.0),  // top-right
   );
 
-  const scale = 0.01;
+  const scale = 0.1;
 
   var vsOut: VSOutput;
   var x = xPositions[instanceIndex] * uni.positionsScale;
@@ -97,11 +97,12 @@ struct VSOutput {
 }
 
 @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+  // Sample unconditionally to satisfy WGSL uniform control flow requirement
+  let texColor = textureSample(spriteTexture, spriteSampler, vsOut.uv);
   // Out-of-bounds instances are flagged with negative alpha in the vertex shader
   if (vsOut.color.a < 0.0) {
     return vec4f(1.0, 0.0, 1.0, 1.0); // debug magenta
   }
-  let texColor = textureSample(spriteTexture, spriteSampler, vsOut.uv);
   if (texColor.a < 0.01) {
     discard;
   }

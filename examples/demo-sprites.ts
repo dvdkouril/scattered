@@ -20,7 +20,7 @@ const { canvas } = sctrd.display(tableIPC.buffer, {
   spriteMapUrl: SPRITE_MAP_URL,
   thumbnailWidth: THUMBNAIL_SIZE,
   thumbnailHeight: THUMBNAIL_SIZE,
-});
+}, { backgroundColor: "#cccccc" });
 
 const appEl = document.querySelector("#app");
 if (appEl) {
