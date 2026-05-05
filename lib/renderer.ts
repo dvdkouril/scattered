@@ -2,8 +2,11 @@ import { prepareViewMatrix, prepareCameraMatrix, hexColorToFloatArray, showCanva
 import { vec3 } from "gl-matrix";
 import { Camera } from "./camera";
 import { assert } from "./assert";
-import { DisplayOptions, ScreenshotOptions } from "./types.ts";
+import { DisplayOptions, ScreenshotOptions, SpriteEncoding } from "./types.ts";
 import { findPointsInLasso, ScreenPoint } from "./lasso";
+import { loadSpriteMap, SpriteMapResult } from "./sprite";
+import pointShaderSource from "./shaders/point.wgsl?raw";
+import spriteShaderSource from "./shaders/sprite.wgsl?raw";
 
 /**
  * Uploads the positional coordinate arrays to GPU buffers. 
@@ -44,92 +47,13 @@ export function uploadDataToGPU(
 }
 
 export function createShaders(device: GPUDevice, presentationFormat: GPUTextureFormat): GPURenderPipeline {
-  /* -------- shaders setup --------  */
   const module = device.createShaderModule({
     label: 'instanced triangles',
-    code: `
-      struct Uniforms {
-        projection: mat4x4f,
-        view: mat4x4f,
-        eyePosition: vec4f,
-        positionsScale: f32,
-      };
-
-      //struct Settings {
-      //  scalingFactor: float,
-      //};
-
-      struct VSOutput {
-        @builtin(position) position: vec4f,
-        @location(0) color: vec4f,
-        @location(1) uv: vec2f,
-      }
-
-      //~ TODO: unused binding position 0
-      @group(0) @binding(1) var<uniform> uni: Uniforms;
-      // feeding the positions from array directly
-      @group(0) @binding(2) var<storage, read> xPositions: array<f32>;
-      @group(0) @binding(3) var<storage, read> yPositions: array<f32>;
-      @group(0) @binding(4) var<storage, read> zPositions: array<f32>;
-      @group(0) @binding(5) var<storage, read> colors: array<vec4f>;
-
-      @vertex fn vs(
-        @builtin(vertex_index) vertexIndex : u32,
-        @builtin(instance_index) instanceIndex: u32
-      ) -> VSOutput {
-        //~ triangle geometry hardcoded here
-        let pos = array(
-          vec2f( 0.0,  0.5),  // top center
-          vec2f(-0.5, -0.5),  // bottom left
-          vec2f( 0.5, -0.5)   // bottom right
-        );
-       
-        const scale = 0.1; //~ this is to scale the triangles themselves, not the positions
-
-        var vsOut: VSOutput;
-        //~ constructing the world position from component buffers
-        var x = xPositions[instanceIndex] * uni.positionsScale;
-        var y = yPositions[instanceIndex] * uni.positionsScale;
-        var z = zPositions[instanceIndex] * uni.positionsScale;
-        var instPos = vec4f(x, y, z, 1.0);
-
-        //~ impostors: align to always face camera
-        var eyeToPos = normalize(instPos.xyz - uni.eyePosition.xyz);
-        //~ use a fallback reference up when the view direction is near-parallel to world up
-        var worldUp = vec3f(0.0, 1.0, 0.0);
-        if (abs(dot(eyeToPos, worldUp)) > 0.999) {
-            worldUp = vec3f(0.0, 0.0, 1.0);
-        }
-        var rightVec = normalize(cross(eyeToPos, worldUp));
-        var billboardUp = cross(rightVec, eyeToPos);
-        var v = pos[vertexIndex] * scale;
-        var vPos = v.x * rightVec + v.y * billboardUp;
-
-        //~ calculate position of each instance vertex
-        //var vertPos = instPos + vec4f(pos[vertexIndex] * scale, 0.0, 1.0);
-        var vertPos = instPos + vec4f(vPos, 0.0);
-        //~ camera transform + projection
-        var transformedPos = uni.projection * uni.view * vertPos;
-
-        //~ outputs for fragment shader
-        vsOut.position = transformedPos;
-        vsOut.color = colors[instanceIndex];
-        vsOut.uv = pos[vertexIndex];
-        return vsOut;
-      }
- 
-      @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-        if (distance(vsOut.uv, vec2f(0, 0)) > 0.1) {
-           discard;
-        }
-        return vsOut.color;
-        //return vec4f(vsOut.uv, 0, 1.0);
-      }
-    `,
+    code: pointShaderSource,
   });
 
   const pipeline = device.createRenderPipeline({
-    label: 'our hardcoded red triangle pipeline',
+    label: 'point pipeline',
     layout: 'auto',
     vertex: {
       entryPoint: 'vs',
@@ -150,6 +74,48 @@ export function createShaders(device: GPUDevice, presentationFormat: GPUTextureF
   return pipeline;
 }
 
+export function createSpriteShaders(device: GPUDevice, presentationFormat: GPUTextureFormat): GPURenderPipeline {
+  const module = device.createShaderModule({
+    label: 'sprite billboard quads',
+    code: spriteShaderSource,
+  });
+
+  const pipeline = device.createRenderPipeline({
+    label: 'sprite billboard pipeline',
+    layout: 'auto',
+    vertex: {
+      entryPoint: 'vs',
+      module,
+    },
+    fragment: {
+      entryPoint: 'fs',
+      module,
+      targets: [{
+        format: presentationFormat,
+        blend: {
+          color: {
+            srcFactor: 'src-alpha',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
+          },
+          alpha: {
+            srcFactor: 'one',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
+          },
+        },
+      }],
+    },
+    depthStencil: {
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      format: 'depth24plus',
+    },
+  });
+
+  return pipeline;
+}
+
 export async function initWebGPUStuff(
   canvas: HTMLCanvasElement,
   xArray: Float32Array,
@@ -158,6 +124,7 @@ export async function initWebGPUStuff(
   colorsArray: Float32Array,
   positionsScale: number,
   options?: DisplayOptions,
+  spriteConfig?: SpriteEncoding,
 ): Promise<{ destroy: () => void; screenshot: (options?: ScreenshotOptions) => Promise<void> } | undefined> {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
@@ -178,7 +145,23 @@ export async function initWebGPUStuff(
     format: presentationFormat,
   });
 
-  const pipeline = createShaders(device, presentationFormat);
+  const isSpriteMode = !!spriteConfig?.spritesheetUrl;
+  let spriteMap: SpriteMapResult | undefined;
+
+  if (isSpriteMode) {
+    spriteMap = await loadSpriteMap(
+      device,
+      spriteConfig!.spritesheetUrl,
+      spriteConfig!.spriteWidth,
+      spriteConfig!.spriteHeight,
+    );
+  }
+
+  const pipeline = isSpriteMode
+    ? createSpriteShaders(device, presentationFormat)
+    : createShaders(device, presentationFormat);
+
+  const verticesPerInstance = isSpriteMode ? 6 : 3;
 
   const [xBuffer, yBuffer, zBuffer, colorsBuffer] = uploadDataToGPU(
     device,
@@ -196,18 +179,38 @@ export async function initWebGPUStuff(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  //const uniformValues = new Float32Array(uniformBufferSize / 4);
+  const bindGroupEntries: GPUBindGroupEntry[] = [
+    { binding: 1, resource: { buffer: uniformBuffer } },
+    { binding: 2, resource: { buffer: xBuffer } },
+    { binding: 3, resource: { buffer: yBuffer } },
+    { binding: 4, resource: { buffer: zBuffer } },
+    { binding: 5, resource: { buffer: colorsBuffer } },
+  ];
+
+  let spriteUniformBuffer: GPUBuffer | undefined;
+  if (isSpriteMode && spriteMap) {
+    // Sprite uniforms buffer: gridCols (f32) + gridRows (f32), padded to 16 bytes
+    spriteUniformBuffer = device.createBuffer({
+      label: 'sprite uniforms',
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(
+      spriteUniformBuffer,
+      0,
+      new Float32Array([spriteMap.gridCols, spriteMap.gridRows, 0, 0]),
+    );
+
+    bindGroupEntries.push(
+      { binding: 6, resource: spriteMap.sampler },
+      { binding: 7, resource: spriteMap.texture.createView() },
+      { binding: 8, resource: { buffer: spriteUniformBuffer } },
+    );
+  }
 
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
-    entries: [
-      //{ binding: 0, resource: { buffer: dataBuffer } },
-      { binding: 1, resource: { buffer: uniformBuffer } },
-      { binding: 2, resource: { buffer: xBuffer } },
-      { binding: 3, resource: { buffer: yBuffer } },
-      { binding: 4, resource: { buffer: zBuffer } },
-      { binding: 5, resource: { buffer: colorsBuffer } },
-    ],
+    entries: bindGroupEntries,
   });
 
   const depthTexture = device.createTexture({
@@ -241,9 +244,9 @@ export async function initWebGPUStuff(
   let autoOrbiting = {
     angle: 0,
     speed: 0.01,
-    radius: 3,
+    radius: 5,
   };
-  let camera = new Camera();
+  let camera = new Camera(0, 5);
   let firstInteractionHappened = false;
   let animFrameId: number;
 
@@ -349,7 +352,7 @@ export async function initWebGPUStuff(
 
     const numOfObjects = xArray.length; //~ TODO: kinda hacky
     pass.setBindGroup(0, bindGroup);
-    pass.draw(3, numOfObjects);
+    pass.draw(verticesPerInstance, numOfObjects);
     pass.end();
 
     const commandBuffer = encoder.finish();
@@ -584,7 +587,7 @@ export async function initWebGPUStuff(
     const pass = encoder.beginRenderPass(offRenderPassDescriptor);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.draw(3, xArray.length);
+    pass.draw(verticesPerInstance, xArray.length);
     pass.end();
     device.queue.submit([encoder.finish()]);
 
@@ -614,6 +617,8 @@ export async function initWebGPUStuff(
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("contextmenu", onContextMenu);
       overlayCanvas.remove();
+      spriteUniformBuffer?.destroy();
+      spriteMap?.texture.destroy();
       device.destroy();
     },
     screenshot,

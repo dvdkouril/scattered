@@ -1,9 +1,22 @@
-export type Encoding = {
+type BaseEncoding = {
 	x?: string;
 	y?: string;
 	z?: string;
 	color?: string;
 };
+
+type PointEncoding = BaseEncoding & {
+	mark?: "point";
+};
+
+export type SpriteEncoding = BaseEncoding & {
+	mark: "sprite";
+	spritesheetUrl: string;
+	spriteWidth: number;
+	spriteHeight: number;
+};
+
+export type Encoding = PointEncoding | SpriteEncoding;
 
 export type DisplayOptions = {
 	backgroundColor?: string;

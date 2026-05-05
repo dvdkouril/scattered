@@ -30,3 +30,7 @@ __pycache__
 .ipynb_checkpoints
 # don't commit the bundled widget javascript code
 src/scattered/widget.js
+
+# example/demo data is fetched from URLs in real usage; keep the folder out of git
+data/
+!data/scattered.csv

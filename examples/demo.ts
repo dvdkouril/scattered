@@ -1,6 +1,6 @@
-import * as sctrd from "./main.ts";
+import * as sctrd from "../lib/main.ts";
 import { tableFromArrays, tableToIPC } from "@uwdata/flechette";
-import { assert } from "./assert.ts";
+import { assert } from "../lib/assert.ts";
 
 // const c = prepareLinearExample();
 const c = prepareRandomExample();
