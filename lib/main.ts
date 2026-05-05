@@ -267,4 +267,8 @@ function display(
   return { canvas, destroy, screenshot: (options?: import("./types.ts").ScreenshotOptions) => screenshotFn(options) };
 }
 
-export { display, mapValuesToColors };
+function display2() {
+  console.log('hi');
+}
+
+export { display, display2, mapValuesToColors };
