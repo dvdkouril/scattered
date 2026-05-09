@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/dvdkouril/scattered/compare/scattered-v0.1.0...scattered-v0.2.0) (2026-05-09)
+
+
+### Features
+
+* add 'sprite' mark type ([#28](https://github.com/dvdkouril/scattered/issues/28)) ([fe07ee0](https://github.com/dvdkouril/scattered/commit/fe07ee0a3b358884e23854ee42587c08ee5f8743))
+
 ## [0.1.0](https://github.com/dvdkouril/scattered/compare/scattered-v0.0.7...scattered-v0.1.0) (2026-03-05)
 
 
